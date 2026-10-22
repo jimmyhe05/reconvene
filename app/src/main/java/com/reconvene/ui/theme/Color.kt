@@ -6,35 +6,32 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-/**
- * Every color token from the Study Pod prototype, named after its CSS variable
- * (--ink-muted becomes inkMuted). Read them in composables with ReconveneTheme.colors.
- */
+// Tokens from the Study Pod design system, named after their CSS variables.
 @Immutable
 data class ReconveneColors(
-    // Backgrounds: the app canvas, then surfaces placed on it
+    // Surfaces
     val canvas: Color,
     val surface: Color,
     val surfaceRaised: Color,
     val surfaceVariant: Color,
     val surfaceDim: Color,
-    // Text and icons, strongest to weakest
+    // Text
     val ink: Color,
     val inkMuted: Color,
     val inkSubtle: Color,
-    // Borders: outline for cards and dividers, outlineStrong for inputs and chips
+    // Borders
     val outline: Color,
     val outlineStrong: Color,
-    // Violet means "do or go": main actions, the selected tab, shared free time
+    // Accent
     val primary: Color,
     val onPrimary: Color,
     val primaryContainer: Color,
     val onPrimaryContainer: Color,
-    // Dark surface for the hero card, live timer and snackbars (dark in both themes)
+    // Hero card and timer, dark in both themes
     val hero: Color,
     val onHero: Color,
     val onHeroMuted: Color,
-    // Status badges. Lime is reserved for "live".
+    // Status
     val live: Color,
     val onLive: Color,
     val arrived: Color,
@@ -47,7 +44,7 @@ data class ReconveneColors(
     val onCanceled: Color,
     val error: Color,
     val onError: Color,
-    // Avatar backgrounds, all read with onTint text
+    // Avatar tints
     val tintCoral: Color,
     val tintBlue: Color,
     val tintMint: Color,
@@ -57,7 +54,6 @@ data class ReconveneColors(
     val onTint: Color,
 )
 
-// Prototype :root tokens
 val LightColors = ReconveneColors(
     canvas = Color(0xFFF2F0EA),
     surface = Color(0xFFFAF9F5),
@@ -97,7 +93,6 @@ val LightColors = ReconveneColors(
     onTint = Color(0xFF22231F),
 )
 
-// Prototype [data-theme=dark] tokens
 val DarkColors = ReconveneColors(
     canvas = Color(0xFF151613),
     surface = Color(0xFF1E1F1B),
@@ -137,10 +132,6 @@ val DarkColors = ReconveneColors(
     onTint = Color(0xFFF4F2EA),
 )
 
-/**
- * Maps the tokens onto Material 3's color roles, so stock Material components
- * (buttons, the nav bar, text fields, sheets) pick up the right colors on their own.
- */
 internal fun ReconveneColors.toColorScheme(darkTheme: Boolean): ColorScheme {
     val base = if (darkTheme) darkColorScheme() else lightColorScheme()
     return base.copy(
@@ -148,15 +139,13 @@ internal fun ReconveneColors.toColorScheme(darkTheme: Boolean): ColorScheme {
         onPrimary = onPrimary,
         primaryContainer = primaryContainer,
         onPrimaryContainer = onPrimaryContainer,
-        // Used for actions on the hero surface, which stays dark in both themes
+        // The hero surface is dark in both themes
         inversePrimary = DarkColors.primary,
-        // Material uses secondary for selected filter chips (ink-filled in the prototype)
-        // and secondaryContainer for the nav bar pill and tonal buttons (violet).
+        // secondary: selected filter chips; secondaryContainer: nav pill and tonal buttons
         secondary = ink,
         onSecondary = canvas,
         secondaryContainer = primaryContainer,
         onSecondaryContainer = onPrimaryContainer,
-        // The prototype has a single accent color, so tertiary repeats primary.
         tertiary = primary,
         onTertiary = onPrimary,
         tertiaryContainer = primaryContainer,
@@ -174,13 +163,12 @@ internal fun ReconveneColors.toColorScheme(darkTheme: Boolean): ColorScheme {
         onError = onError,
         errorContainer = canceled,
         onErrorContainer = onCanceled,
-        // Material's outline is for inputs (strong); outlineVariant is for dividers (subtle).
+        // Material's outline is the strong border, outlineVariant the subtle one
         outline = outlineStrong,
         outlineVariant = outline,
         surfaceBright = surfaceRaised,
         surfaceDim = surfaceDim,
-        // Material ranks containers by elevation: higher is darker in light mode
-        // and lighter in dark mode, so the order flips between themes.
+        // Higher containers are darker in light mode and lighter in dark mode
         surfaceContainerLowest = if (darkTheme) surfaceDim else surfaceRaised,
         surfaceContainerLow = surface,
         surfaceContainer = surface,

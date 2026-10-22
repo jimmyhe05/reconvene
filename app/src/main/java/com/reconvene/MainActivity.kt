@@ -41,7 +41,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Temporary first screen that shows the theme in use. The navigation step replaces it.
 @Composable
 fun WelcomePlaceholder(modifier: Modifier = Modifier) {
     Column(
@@ -50,7 +49,6 @@ fun WelcomePlaceholder(modifier: Modifier = Modifier) {
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
-        // Eyebrow label: uppercase with wide letter spacing, as in the prototype
         Text(
             text = stringResource(R.string.placeholder_eyebrow).uppercase(),
             style = MaterialTheme.typography.labelSmall,
@@ -66,14 +64,12 @@ fun WelcomePlaceholder(modifier: Modifier = Modifier) {
             color = ReconveneTheme.colors.inkMuted,
         )
         LiveBadge()
-        // Material's Button reads primary from the color scheme; no colors passed in.
-        Button(onClick = { /* Does nothing until the pod screens exist */ }) {
+        Button(onClick = {}) {
             Text(stringResource(R.string.placeholder_action))
         }
     }
 }
 
-// Status badges pair a marker with a word, never color alone.
 @Composable
 private fun LiveBadge() {
     Surface(

@@ -7,8 +7,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 
-// Passes the Reconvene colors down the UI tree. "static" because they only change
-// when the whole app switches between light and dark.
 private val LocalReconveneColors = staticCompositionLocalOf { LightColors }
 
 @Composable
@@ -16,7 +14,6 @@ fun ReconveneTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    // No dynamic (wallpaper-based) color: the app always uses the Reconvene palette.
     val colors = if (darkTheme) DarkColors else LightColors
     CompositionLocalProvider(LocalReconveneColors provides colors) {
         MaterialTheme(
@@ -28,7 +25,6 @@ fun ReconveneTheme(
     }
 }
 
-// Lets composables read ReconveneTheme.colors.live, the same way as MaterialTheme.colorScheme.
 object ReconveneTheme {
     val colors: ReconveneColors
         @Composable

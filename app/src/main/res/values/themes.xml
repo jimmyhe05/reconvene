@@ -2,7 +2,7 @@
 <resources>
 
     <style name="Theme.Reconvene" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- Matches the Compose background, so dark mode doesn't flash white at launch -->
+        <!-- Avoids a white flash at launch in dark mode -->
         <item name="android:windowBackground">@color/canvas</item>
     </style>
 </resources>

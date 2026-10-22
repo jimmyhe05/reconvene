@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window background shown before Compose draws: the prototype's canvas color.
-         values-night has the dark one. -->
     <color name="canvas">#FFF2F0EA</color>
 </resources>
