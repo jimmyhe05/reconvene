@@ -1,0 +1,25 @@
+# Local-only files: project notes, tool settings, class and textbook reference.
+# Course and textbook content is not ours to redistribute. Never commit.
+.claude/
+CLAUDE.md
+/docs/
+
+# Android Studio defaults
+.kotlin
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# macOS Finder metadata
+.DS_Store
