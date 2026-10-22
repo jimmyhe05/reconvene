@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Reconvene</string>
+    <string name="slogan">Study together, all semester.</string>
+    <string name="placeholder_eyebrow">Now and soon</string>
+    <string name="placeholder_live">Live</string>
+    <string name="placeholder_action">Find a pod</string>
 </resources>

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Reconvene" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Reconvene" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Matches the Compose background, so dark mode doesn't flash white at launch -->
+        <item name="android:windowBackground">@color/canvas</item>
+    </style>
 </resources>
