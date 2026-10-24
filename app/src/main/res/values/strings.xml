@@ -3,4 +3,42 @@
     <string name="nav_discover">Discover</string>
     <string name="nav_groups">Groups</string>
     <string name="nav_profile">Profile</string>
+
+    <string name="discover_title">Study together, today.</string>
+    <string name="discover_loading">Loading pods</string>
+    <string name="discover_empty_title">Nothing scheduled right now</string>
+    <string name="discover_empty_body">Start one and others can join.</string>
+    <string name="discover_error_title">Couldn\'t load pods</string>
+    <string name="discover_error_body">Check your connection and try again.</string>
+    <string name="action_retry">Try again</string>
+
+    <string name="section_now_and_soon">Now and soon</string>
+    <string name="section_later_today">Later today</string>
+    <plurals name="section_pod_count">
+        <item quantity="one">%d pod</item>
+        <item quantity="other">%d pods</item>
+    </plurals>
+    <string name="day_today">Today</string>
+    <string name="day_tomorrow">Tomorrow</string>
+
+    <string name="badge_ongoing">Ongoing</string>
+    <string name="badge_full">Full</string>
+    <plurals name="badge_spots_left">
+        <item quantity="one">%d spot left</item>
+        <item quantity="other">%d spots left</item>
+    </plurals>
+
+    <string name="pod_time_ongoing">Ongoing until %1$s</string>
+    <plurals name="pod_time_starts_in">
+        <item quantity="one">Starts in %d min</item>
+        <item quantity="other">Starts in %d min</item>
+    </plurals>
+    <string name="pod_time_range">%1$s, %2$s to %3$s</string>
+    <string name="pod_place">%1$s, %2$s</string>
+    <string name="pod_hosted_by">Hosted by %1$s</string>
+    <string name="pod_hosted_by_going">Hosted by %1$s, %2$d going</string>
+
+    <string name="mode_quiet">Quiet company</string>
+    <string name="mode_coordinate">Okay to coordinate</string>
+    <string name="mode_talk">Open to course talk</string>
 </resources>
