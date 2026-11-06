@@ -4,10 +4,9 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.testing.MainDispatcherRule
 import com.reconvene.testing.testPod
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,17 +32,27 @@ class DiscoverViewModelTest {
     private fun minutesFromNow(minutes: Long) = now.plus(Duration.ofMinutes(minutes))
 
     @Test
-    fun startsInLoadingUntilPodsArrive() {
+    fun startsInLoadingUntilRefreshFinishes() {
         val viewModel = DiscoverViewModel(repository, clock)
 
         assertEquals(DiscoverUiState.Loading, viewModel.uiState.value)
     }
 
     @Test
+    fun showsCachedPodsWhileRefreshingAndAfterItFails() = runTest {
+        repository.cache(listOf(testPod(startsAt = minutesFromNow(30))))
+        val viewModel = DiscoverViewModel(repository, clock)
+        assertTrue(viewModel.uiState.value is DiscoverUiState.Content)
+
+        repository.failRefresh()
+        assertTrue(viewModel.uiState.value is DiscoverUiState.Content)
+    }
+
+    @Test
     fun groupsPodsIntoSectionsInStartOrder() = runTest {
         val viewModel = DiscoverViewModel(repository, clock)
 
-        repository.emit(
+        repository.finishRefresh(
             listOf(
                 testPod(id = "monday", startsAt = ZonedDateTime.of(2026, 10, 26, 9, 0, 0, 0, zone).toInstant()),
                 testPod(id = "tonight", startsAt = minutesFromNow(5 * 60)),
@@ -69,7 +78,7 @@ class DiscoverViewModelTest {
     fun showsEmptyWhenOnlyEndedOrCanceledPods() = runTest {
         val viewModel = DiscoverViewModel(repository, clock)
 
-        repository.emit(
+        repository.finishRefresh(
             listOf(
                 testPod(id = "ended", startsAt = minutesFromNow(-120), durationMinutes = 60),
                 testPod(id = "canceled", startsAt = minutesFromNow(60), canceled = true),
@@ -80,28 +89,34 @@ class DiscoverViewModelTest {
     }
 
     @Test
-    fun showsErrorAndRecoversOnRetry() = runTest {
-        repository.shouldFail = true
+    fun showsErrorWhenRefreshFailsWithNothingCachedAndRecoversOnRetry() = runTest {
+        repository.failRefresh()
         val viewModel = DiscoverViewModel(repository, clock)
         assertEquals(DiscoverUiState.Error, viewModel.uiState.value)
 
-        repository.shouldFail = false
         viewModel.retry()
         assertEquals(DiscoverUiState.Loading, viewModel.uiState.value)
 
-        repository.emit(listOf(testPod(startsAt = minutesFromNow(30))))
+        repository.finishRefresh(listOf(testPod(startsAt = minutesFromNow(30))))
         assertTrue(viewModel.uiState.value is DiscoverUiState.Content)
     }
 }
 
 private class TestPodRepository : PodRepository {
-    private val pods = MutableSharedFlow<List<Pod>>()
-    var shouldFail = false
+    private val cachedPods = MutableStateFlow<List<Pod>>(emptyList())
+    private val refreshResults = Channel<Result<List<Pod>>>(Channel.UNLIMITED)
 
-    suspend fun emit(value: List<Pod>) = pods.emit(value)
+    fun cache(pods: List<Pod>) {
+        cachedPods.value = pods
+    }
 
-    override fun observePods(): Flow<List<Pod>> = flow {
-        if (shouldFail) throw IOException("Network unavailable")
-        emitAll(pods)
+    suspend fun finishRefresh(pods: List<Pod>) = refreshResults.send(Result.success(pods))
+
+    suspend fun failRefresh() = refreshResults.send(Result.failure(IOException("Network unavailable")))
+
+    override fun observePods(): Flow<List<Pod>> = cachedPods
+
+    override suspend fun refresh() {
+        cachedPods.value = refreshResults.receive().getOrThrow()
     }
 }
