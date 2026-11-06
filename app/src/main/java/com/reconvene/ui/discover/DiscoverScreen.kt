@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
-import com.reconvene.data.repository.samplePods
+import com.reconvene.data.remote.samplePods
 import com.reconvene.ui.components.EmptyState
 import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Clock
