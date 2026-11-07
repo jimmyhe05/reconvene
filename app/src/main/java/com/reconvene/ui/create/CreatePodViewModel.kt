@@ -49,8 +49,16 @@ class CreatePodViewModel(
     fun updateForm(form: CreatePodForm) {
         savedStateHandle[FORM_KEY] = form
         _uiState.update { state ->
-            state.copy(form = form, errors = if (submitted) validate(form) else FormErrors())
+            state.copy(
+                form = form,
+                today = LocalDate.now(clock),
+                errors = if (submitted) validate(form) else FormErrors(),
+            )
         }
+    }
+
+    fun refreshToday() {
+        _uiState.update { it.copy(today = LocalDate.now(clock)) }
     }
 
     fun create() {

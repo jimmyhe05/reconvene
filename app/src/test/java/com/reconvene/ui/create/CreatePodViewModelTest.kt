@@ -14,6 +14,9 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.IOException
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -81,6 +84,21 @@ class CreatePodViewModelTest {
     }
 
     @Test
+    fun todayMovesOnAfterMidnightOnResumeAndOnEdits() {
+        val movingClock = MovingClock(ZonedDateTime.of(2026, 11, 10, 23, 50, 0, 0, zone).toInstant(), zone)
+        val lateNight = CreatePodViewModel(SavedStateHandle(), repository, movingClock, hostName = "You")
+        assertEquals(LocalDate.of(2026, 11, 10), lateNight.uiState.value.today)
+
+        movingClock.now = movingClock.now.plus(Duration.ofMinutes(20))
+        lateNight.refreshToday()
+        assertEquals(LocalDate.of(2026, 11, 11), lateNight.uiState.value.today)
+
+        movingClock.now = movingClock.now.plus(Duration.ofDays(1))
+        lateNight.updateForm(lateNight.uiState.value.form.copy(title = "Algorithms"))
+        assertEquals(LocalDate.of(2026, 11, 12), lateNight.uiState.value.today)
+    }
+
+    @Test
     fun failedSaveLetsTheUserTryAgain() {
         repository.shouldFail = true
         fillIn()
@@ -93,6 +111,14 @@ class CreatePodViewModelTest {
         viewModel.create()
         assertTrue(viewModel.uiState.value.isCreated)
     }
+}
+
+private class MovingClock(var now: Instant, private val zone: ZoneId) : Clock() {
+    override fun getZone(): ZoneId = zone
+
+    override fun withZone(zone: ZoneId): Clock = MovingClock(now, zone)
+
+    override fun instant(): Instant = now
 }
 
 private class RecordingPodRepository : PodRepository {

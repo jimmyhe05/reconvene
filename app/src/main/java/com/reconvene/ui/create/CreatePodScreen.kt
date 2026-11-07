@@ -48,6 +48,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
@@ -71,6 +73,7 @@ fun CreatePodScreen(
     viewModel: CreatePodViewModel = viewModel(factory = CreatePodViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshToday() }
     LaunchedEffect(uiState.isCreated) {
         if (uiState.isCreated) onCreated()
     }
