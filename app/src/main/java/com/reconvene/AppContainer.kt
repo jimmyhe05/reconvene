@@ -10,6 +10,7 @@ import java.time.Clock
 
 class AppContainer(context: Context) {
     val clock: Clock = Clock.systemDefaultZone()
+    val currentUserName = "You"
 
     private val database = Room.databaseBuilder(
         context,

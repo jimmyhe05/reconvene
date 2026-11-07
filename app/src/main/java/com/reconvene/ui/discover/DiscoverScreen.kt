@@ -1,6 +1,7 @@
 package com.reconvene.ui.discover
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,13 +10,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -39,23 +45,46 @@ import java.time.ZoneId
 
 @Composable
 fun DiscoverScreen(
+    onCreatePod: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(factory = DiscoverViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    DiscoverContent(uiState = uiState, onRetry = viewModel::retry, modifier = modifier)
+    DiscoverContent(uiState = uiState, onRetry = viewModel::retry, onCreatePod = onCreatePod, modifier = modifier)
 }
 
 @Composable
 fun DiscoverContent(
     uiState: DiscoverUiState,
     onRetry: () -> Unit,
+    onCreatePod: () -> Unit,
     modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        PodList(uiState = uiState, onRetry = onRetry, onCreatePod = onCreatePod)
+        ExtendedFloatingActionButton(
+            onClick = onCreatePod,
+            icon = {
+                Icon(painterResource(R.drawable.ic_plus), contentDescription = stringResource(R.string.action_create_pod))
+            },
+            text = { Text(stringResource(R.string.action_create_pod)) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+        )
+    }
+}
+
+@Composable
+private fun PodList(
+    uiState: DiscoverUiState,
+    onRetry: () -> Unit,
+    onCreatePod: () -> Unit,
 ) {
     val loadingLabel = stringResource(R.string.discover_loading)
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "title") {
@@ -82,6 +111,11 @@ fun DiscoverContent(
                     icon = R.drawable.ic_compass,
                     title = stringResource(R.string.discover_empty_title),
                     body = stringResource(R.string.discover_empty_body),
+                    action = {
+                        Button(onClick = onCreatePod) {
+                            Text(stringResource(R.string.action_create_pod))
+                        }
+                    },
                 )
             }
             DiscoverUiState.Error -> item(key = "error") {
@@ -161,7 +195,7 @@ private fun DiscoverContentPreview(
 ) {
     ReconveneTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            DiscoverContent(uiState = uiState, onRetry = {})
+            DiscoverContent(uiState = uiState, onRetry = {}, onCreatePod = {})
         }
     }
 }

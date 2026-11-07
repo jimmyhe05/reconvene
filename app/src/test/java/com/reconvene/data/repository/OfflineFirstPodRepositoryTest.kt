@@ -46,6 +46,17 @@ class OfflineFirstPodRepositoryTest {
         assertTrue(result.exceptionOrNull() is IOException)
         assertEquals(listOf("cached"), repository.observePods().first().map { it.id })
     }
+
+    @Test
+    fun createdPodShowsUpForObserversAndSurvivesRefresh() = runTest {
+        val remotePods = listOf(testPod(id = "remote", startsAt = noon))
+        val repository = OfflineFirstPodRepository(podDao, TestPodRemoteDataSource { remotePods })
+
+        repository.createPod(testPod(id = "mine", startsAt = noon.plusSeconds(3600)))
+        repository.refresh()
+
+        assertEquals(listOf("remote", "mine"), repository.observePods().first().map { it.id })
+    }
 }
 
 private class TestPodRemoteDataSource(private val fetch: () -> List<Pod>) : PodRemoteDataSource {
