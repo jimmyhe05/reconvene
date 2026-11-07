@@ -10,3 +10,6 @@ data object GroupsRoute
 
 @Serializable
 data object ProfileRoute
+
+@Serializable
+data object CreatePodRoute
