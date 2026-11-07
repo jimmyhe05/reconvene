@@ -41,4 +41,54 @@
     <string name="mode_quiet">Quiet company</string>
     <string name="mode_coordinate">Okay to coordinate</string>
     <string name="mode_talk">Open to course talk</string>
+
+    <string name="action_back">Back</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_create_pod">Create pod</string>
+
+    <string name="create_title">New pod</string>
+    <string name="create_intro">Set a time, a public spot and a group size.</string>
+    <string name="create_counter">%1$d of %2$d</string>
+    <string name="create_topic">Study topic</string>
+    <string name="create_topic_placeholder">Problem set 3, sorting and graphs</string>
+    <string name="create_course">Course (optional)</string>
+    <string name="create_course_hint">Like CS 501. Helps classmates find you.</string>
+    <string name="create_building">Building</string>
+    <string name="create_meeting_point">Meeting point</string>
+    <string name="create_meeting_point_placeholder">Floor 2, tables by the windows</string>
+    <string name="create_meeting_point_hint">A public, specific spot. Never a private address.</string>
+    <string name="create_when">When</string>
+    <string name="create_starts">Starts %1$s</string>
+    <string name="create_ends">Ends %1$s</string>
+    <string name="create_start_time">Start time</string>
+    <string name="create_end_time">End time</string>
+    <string name="create_when_summary">%1$s, %2$s</string>
+    <string name="create_group_size">Group size</string>
+    <string name="create_group_size_hint">Including you. %1$d to %2$d people.</string>
+    <plurals name="create_people">
+        <item quantity="one">%d person</item>
+        <item quantity="other">%d people</item>
+    </plurals>
+    <string name="create_fewer_people">Fewer people</string>
+    <string name="create_more_people">More people</string>
+    <string name="create_vibe">Vibe</string>
+    <string name="create_fix_errors">Check the highlighted fields above.</string>
+    <string name="create_save_failed">Couldn\'t save the pod. Try again.</string>
+
+    <string name="mode_quiet_hint">Sit together and work. No chatting.</string>
+    <string name="mode_coordinate_hint">Short check-ins and quick questions are fine.</string>
+    <string name="mode_talk_hint">Happy to talk through course material.</string>
+
+    <string name="duration_minutes">%d min</string>
+    <string name="duration_hours">%d h</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+
+    <string name="error_topic_too_short">Enter a study topic, at least %d characters.</string>
+    <string name="error_building_missing">Choose a building.</string>
+    <string name="error_meeting_point_too_short">Add a specific public spot, like a floor or an entrance.</string>
+    <string name="error_end_not_after_start">The end time must be after the start time.</string>
+    <string name="error_already_over">That time has already passed.</string>
+    <string name="error_too_short">Plan at least %d minutes.</string>
+    <string name="error_too_long">Keep it to %d hours or less.</string>
 </resources>
