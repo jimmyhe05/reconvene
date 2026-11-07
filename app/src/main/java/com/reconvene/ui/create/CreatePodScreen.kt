@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,7 +76,6 @@ fun CreatePodScreen(
     }
     CreatePodContent(
         uiState = uiState,
-        today = remember { LocalDate.now() },
         onFormChange = viewModel::updateForm,
         onCreate = viewModel::create,
         onBack = onBack,
@@ -89,7 +87,6 @@ fun CreatePodScreen(
 @Composable
 fun CreatePodContent(
     uiState: CreatePodUiState,
-    today: LocalDate,
     onFormChange: (CreatePodForm) -> Unit,
     onCreate: () -> Unit,
     onBack: () -> Unit,
@@ -152,7 +149,7 @@ fun CreatePodContent(
                 maxLength = MEETING_POINT_MAX,
                 error = errors.meetingPoint?.message(),
             )
-            WhenField(form = form, today = today, error = errors.time?.message(), onFormChange = onFormChange)
+            WhenField(form = form, today = uiState.today, error = errors.time?.message(), onFormChange = onFormChange)
             FieldGroup(
                 label = stringResource(R.string.create_group_size),
                 hint = stringResource(R.string.create_group_size_hint, CAPACITY_MIN, CAPACITY_MAX),
@@ -433,9 +430,9 @@ private fun CreatePodContentPreview() {
                         startTime = LocalTime.of(15, 0),
                         endTime = LocalTime.of(16, 30),
                     ),
+                    today = previewToday,
                     errors = FormErrors(meetingPoint = FormError.MEETING_POINT_TOO_SHORT),
                 ),
-                today = previewToday,
                 onFormChange = {},
                 onCreate = {},
                 onBack = {},

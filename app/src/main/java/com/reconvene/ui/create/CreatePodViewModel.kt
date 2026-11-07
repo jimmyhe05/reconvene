@@ -15,11 +15,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
 
 data class CreatePodUiState(
     val form: CreatePodForm,
+    val today: LocalDate,
     val errors: FormErrors = FormErrors(),
     val isSaving: Boolean = false,
     val saveFailed: Boolean = false,
@@ -32,7 +34,9 @@ class CreatePodViewModel(
     private val hostName: String,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CreatePodUiState(form = newPodForm(ZonedDateTime.now(clock))))
+    private val _uiState = MutableStateFlow(
+        ZonedDateTime.now(clock).let { now -> CreatePodUiState(form = newPodForm(now), today = now.toLocalDate()) }
+    )
     val uiState: StateFlow<CreatePodUiState> = _uiState.asStateFlow()
 
     private var submitted = false
