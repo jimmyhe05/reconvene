@@ -1,8 +1,10 @@
 package com.reconvene.ui.create
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -29,19 +31,23 @@ data class CreatePodUiState(
 )
 
 class CreatePodViewModel(
+    private val savedStateHandle: SavedStateHandle,
     private val podRepository: PodRepository,
     private val clock: Clock,
     private val hostName: String,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        ZonedDateTime.now(clock).let { now -> CreatePodUiState(form = newPodForm(now), today = now.toLocalDate()) }
+        ZonedDateTime.now(clock).let { now ->
+            CreatePodUiState(form = savedStateHandle[FORM_KEY] ?: newPodForm(now), today = now.toLocalDate())
+        }
     )
     val uiState: StateFlow<CreatePodUiState> = _uiState.asStateFlow()
 
     private var submitted = false
 
     fun updateForm(form: CreatePodForm) {
+        savedStateHandle[FORM_KEY] = form
         _uiState.update { state ->
             state.copy(form = form, errors = if (submitted) validate(form) else FormErrors())
         }
@@ -71,10 +77,17 @@ class CreatePodViewModel(
     private fun validate(form: CreatePodForm) = form.validate(clock.instant(), clock.zone)
 
     companion object {
+        private const val FORM_KEY = "form"
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as ReconveneApplication).container
-                CreatePodViewModel(container.podRepository, container.clock, container.currentUserName)
+                CreatePodViewModel(
+                    savedStateHandle = createSavedStateHandle(),
+                    podRepository = container.podRepository,
+                    clock = container.clock,
+                    hostName = container.currentUserName,
+                )
             }
         }
     }

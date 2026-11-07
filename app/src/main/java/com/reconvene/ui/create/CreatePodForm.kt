@@ -2,6 +2,7 @@ package com.reconvene.ui.create
 
 import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMode
+import java.io.Serializable
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -33,7 +34,7 @@ data class CreatePodForm(
     val endTime: LocalTime,
     val capacity: Int = 4,
     val mode: PodMode = PodMode.QUIET,
-) {
+) : Serializable {
     fun startsAt(zone: ZoneId): Instant = day.atTime(startTime).atZone(zone).toInstant()
 
     fun endsAt(zone: ZoneId): Instant = day.atTime(endTime).atZone(zone).toInstant()

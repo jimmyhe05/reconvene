@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.reconvene.R
@@ -34,7 +35,7 @@ class CreatePodScreenTest {
     private val zone = ZoneId.of("America/New_York")
     private val clock = Clock.fixed(ZonedDateTime.of(2026, 11, 10, 14, 0, 0, 0, zone).toInstant(), zone)
     private val repository = RecordingPodRepository()
-    private val viewModel = CreatePodViewModel(repository, clock, hostName = "You")
+    private val viewModel = CreatePodViewModel(SavedStateHandle(), repository, clock, hostName = "You")
     private var created = false
 
     private fun string(@StringRes id: Int, vararg args: Any): String =

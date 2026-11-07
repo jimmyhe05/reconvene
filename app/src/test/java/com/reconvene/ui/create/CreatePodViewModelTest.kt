@@ -1,5 +1,6 @@
 package com.reconvene.ui.create
 
+import androidx.lifecycle.SavedStateHandle
 import com.reconvene.data.model.Pod
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.testing.MainDispatcherRule
@@ -25,7 +26,8 @@ class CreatePodViewModelTest {
     private val zone = ZoneId.of("America/New_York")
     private val clock = Clock.fixed(ZonedDateTime.of(2026, 11, 10, 14, 0, 0, 0, zone).toInstant(), zone)
     private val repository = RecordingPodRepository()
-    private val viewModel = CreatePodViewModel(repository, clock, hostName = "You")
+    private val savedState = SavedStateHandle()
+    private val viewModel = CreatePodViewModel(savedState, repository, clock, hostName = "You")
 
     private fun fillIn() = viewModel.updateForm(
         viewModel.uiState.value.form.copy(
@@ -67,6 +69,15 @@ class CreatePodViewModelTest {
         val pod = repository.created.single()
         assertEquals("Algorithms exam review", pod.title)
         assertEquals("You", pod.hostName)
+    }
+
+    @Test
+    fun formComesBackFromSavedStateAfterProcessDeath() {
+        fillIn()
+
+        val restored = CreatePodViewModel(savedState, repository, clock, hostName = "You")
+
+        assertEquals(viewModel.uiState.value.form, restored.uiState.value.form)
     }
 
     @Test
