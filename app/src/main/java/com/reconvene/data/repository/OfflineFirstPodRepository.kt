@@ -19,4 +19,8 @@ class OfflineFirstPodRepository(
     override suspend fun refresh() {
         podDao.upsertAll(remote.fetchPods().map { it.toEntity() })
     }
+
+    override suspend fun createPod(pod: Pod) {
+        podDao.upsertAll(listOf(pod.toEntity()))
+    }
 }

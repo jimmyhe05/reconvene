@@ -7,4 +7,6 @@ interface PodRepository {
     fun observePods(): Flow<List<Pod>>
 
     suspend fun refresh()
+
+    suspend fun createPod(pod: Pod)
 }

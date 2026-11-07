@@ -119,4 +119,8 @@ private class TestPodRepository : PodRepository {
     override suspend fun refresh() {
         cachedPods.value = refreshResults.receive().getOrThrow()
     }
+
+    override suspend fun createPod(pod: Pod) {
+        cachedPods.value += pod
+    }
 }
