@@ -57,10 +57,28 @@ class OfflineFirstPodRepositoryTest {
 
         assertEquals(listOf("remote", "mine"), repository.observePods().first().map { it.id })
     }
+
+    @Test
+    fun createdPodIsSavedLocallyAndSentToRemote() = runTest {
+        val remote = TestPodRemoteDataSource { emptyList() }
+        val repository = OfflineFirstPodRepository(podDao, remote)
+        val pod = testPod(id = "mine", startsAt = noon)
+
+        repository.createPod(pod)
+
+        assertEquals(listOf(pod), repository.observePods().first())
+        assertEquals(listOf(pod), remote.created)
+    }
 }
 
 private class TestPodRemoteDataSource(private val fetch: () -> List<Pod>) : PodRemoteDataSource {
+    val created = mutableListOf<Pod>()
+
     override suspend fun fetchPods(): List<Pod> = fetch()
+
+    override suspend fun createPod(pod: Pod) {
+        created += pod
+    }
 }
 
 private class FakePodDao : PodDao {
