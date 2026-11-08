@@ -14,6 +14,9 @@ class FakePodRemoteDataSource(private val clock: Clock) : PodRemoteDataSource {
         delay(700)
         return samplePods(clock)
     }
+
+    // Sample pods are regenerated on every fetch, so there is nowhere to send a new one.
+    override suspend fun createPod(pod: Pod) = Unit
 }
 
 fun samplePods(clock: Clock): List<Pod> {

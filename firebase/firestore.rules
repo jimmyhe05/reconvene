@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// Temporary rules until bu.edu sign-in lands. Anyone with the app's config can read pods and create a
+// pod that passes the checks below; nobody can change or delete one. Once sign-in exists, require
+// request.auth with a verified @bu.edu email here, and check the host against request.auth.uid.
+//
+// Field names and limits must match PodFields in FirestorePodMapping.kt and the limits in CreatePodForm.kt.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /pods/{podId} {
+      allow read: if true;
+      allow create: if podId.size() <= 64 && isValidNewPod(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    function isValidNewPod(pod) {
+      let minute = 60 * 1000;
+      let length = pod.endsAt.toMillis() - pod.startsAt.toMillis();
+      return pod.keys().hasOnly(['title', 'course', 'building', 'meetingPoint', 'startsAt', 'endsAt',
+                                 'capacity', 'hostName', 'memberNames', 'mode', 'canceled'])
+        && pod.keys().hasAll(['title', 'course', 'building', 'meetingPoint', 'startsAt', 'endsAt',
+                              'capacity', 'hostName', 'memberNames', 'mode', 'canceled'])
+        && pod.title is string && pod.title.size() >= 3 && pod.title.size() <= 60
+        && (pod.course == null || (pod.course is string && pod.course.size() <= 20))
+        && pod.building is string && pod.building.size() >= 1 && pod.building.size() <= 80
+        && pod.meetingPoint is string && pod.meetingPoint.size() >= 3 && pod.meetingPoint.size() <= 80
+        && pod.startsAt is timestamp && pod.endsAt is timestamp
+        && pod.endsAt > request.time
+        && length >= 30 * minute && length <= 240 * minute
+        && pod.startsAt.toMillis() <= request.time.toMillis() + 7 * 24 * 60 * minute
+        && pod.capacity is int && pod.capacity >= 2 && pod.capacity <= 8
+        && pod.hostName is string && pod.hostName.size() >= 2 && pod.hostName.size() <= 20
+        && pod.memberNames is list && pod.memberNames.size() >= 1 && pod.memberNames.size() <= pod.capacity
+        && pod.mode in ['QUIET', 'COORDINATE', 'TALK']
+        && pod.canceled == false;
+    }
+  }
+}

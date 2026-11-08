@@ -20,7 +20,9 @@ class OfflineFirstPodRepository(
         podDao.upsertAll(remote.fetchPods().map { it.toEntity() })
     }
 
+    // Room first, so the pod shows up at once and survives a restart even if the remote is unreachable.
     override suspend fun createPod(pod: Pod) {
         podDao.upsertAll(listOf(pod.toEntity()))
+        remote.createPod(pod)
     }
 }
