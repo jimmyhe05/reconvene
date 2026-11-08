@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.room.Room
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.reconvene.data.auth.AuthRepository
+import com.reconvene.data.auth.FirebaseAuthRepository
+import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.local.ReconveneDatabase
 import com.reconvene.data.remote.FakePodRemoteDataSource
 import com.reconvene.data.remote.FirestorePodRemoteDataSource
@@ -16,6 +20,10 @@ import java.time.Clock
 class AppContainer(context: Context) {
     val clock: Clock = Clock.systemDefaultZone()
     val currentUserName = "You"
+    val googleWebClientId: String = BuildConfig.FIREBASE_WEB_CLIENT_ID
+
+    // Null when local.properties has no Firebase settings (see firebase/README.md).
+    private val firebaseApp: FirebaseApp? = firebaseApp(context)
 
     private val database = Room.databaseBuilder(
         context,
@@ -25,13 +33,16 @@ class AppContainer(context: Context) {
 
     val podRepository: PodRepository = OfflineFirstPodRepository(
         podDao = database.podDao(),
-        remote = podRemoteDataSource(context),
+        remote = podRemoteDataSource(),
     )
 
-    // Firestore when local.properties has the Firebase settings (see firebase/README.md), sample pods otherwise,
+    val authRepository: AuthRepository =
+        firebaseApp?.let { FirebaseAuthRepository(FirebaseAuth.getInstance(it)) } ?: UnavailableAuthRepository
+
+    // Firestore when Firebase is configured, sample pods otherwise,
     // so a clean checkout and CI build and run without a Firebase project.
-    private fun podRemoteDataSource(context: Context): PodRemoteDataSource {
-        val app = firebaseApp(context) ?: return FakePodRemoteDataSource(clock)
+    private fun podRemoteDataSource(): PodRemoteDataSource {
+        val app = firebaseApp ?: return FakePodRemoteDataSource(clock)
         return FirestorePodRemoteDataSource(FirebaseFirestore.getInstance(app), clock)
     }
 
