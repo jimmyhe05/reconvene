@@ -33,6 +33,7 @@ android {
         buildConfigField("String", "FIREBASE_PROJECT_ID", firebaseSetting("projectId"))
         buildConfigField("String", "FIREBASE_APP_ID", firebaseSetting("appId"))
         buildConfigField("String", "FIREBASE_API_KEY", firebaseSetting("apiKey"))
+        buildConfigField("String", "FIREBASE_WEB_CLIENT_ID", firebaseSetting("webClientId"))
     }
 
     buildTypes {
@@ -73,6 +74,10 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.kotlinx.coroutines.play.services)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
