@@ -91,4 +91,13 @@
     <string name="error_already_over">That time has already passed.</string>
     <string name="error_too_short">Plan at least %d minutes.</string>
     <string name="error_too_long">Keep it to %d hours or less.</string>
+
+    <string name="profile_sign_in_intro">Sign in with your BU Google account to host and join pods.</string>
+    <string name="profile_sign_in">Sign in with BU Google</string>
+    <string name="profile_sign_in_unavailable">Sign-in isn\'t set up in this build.</string>
+    <string name="profile_signing_in">Signing in</string>
+    <string name="profile_sign_out">Sign out</string>
+    <string name="profile_bu_verified">BU email verified</string>
+    <string name="profile_error_not_bu">Use a BU Google account (@bu.edu).</string>
+    <string name="profile_error_failed">Couldn\'t sign in. Check your connection and try again.</string>
 </resources>
