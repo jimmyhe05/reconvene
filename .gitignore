@@ -23,3 +23,6 @@ local.properties
 
 # macOS Finder metadata
 .DS_Store
+
+# Firebase client config. Values go in local.properties instead (see firebase/README.md).
+google-services.json
