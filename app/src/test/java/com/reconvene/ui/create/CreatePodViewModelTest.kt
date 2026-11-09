@@ -165,4 +165,6 @@ private class RecordingPodRepository : PodRepository {
     override suspend fun joinPod(podId: String, member: PodMember) = Unit
 
     override suspend fun leavePod(podId: String, uid: String) = Unit
+
+    override suspend fun cancelPod(podId: String, uid: String) = Unit
 }

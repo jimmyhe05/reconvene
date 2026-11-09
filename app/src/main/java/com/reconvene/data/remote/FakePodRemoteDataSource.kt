@@ -23,6 +23,8 @@ class FakePodRemoteDataSource(private val clock: Clock) : PodRemoteDataSource {
     override suspend fun joinPod(pod: Pod, member: PodMember): Pod = pod.withMember(member)
 
     override suspend fun leavePod(pod: Pod, uid: String): Pod = pod.withoutMember(uid)
+
+    override suspend fun cancelPod(pod: Pod, uid: String): Pod = pod.copy(canceled = true)
 }
 
 private fun sampleMember(name: String) = PodMember(uid = "sample-${name.lowercase()}", name = name)

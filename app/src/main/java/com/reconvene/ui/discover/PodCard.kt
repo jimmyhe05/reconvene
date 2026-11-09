@@ -15,14 +15,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -51,6 +58,7 @@ fun PodCard(
     isBusy: Boolean = false,
     onJoin: () -> Unit = {},
     onLeave: () -> Unit = {},
+    onCancel: () -> Unit = {},
 ) {
     PodCardSurface(modifier.semantics(mergeDescendants = true) {}) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -73,7 +81,7 @@ fun PodCard(
             Tag(stringResource(pod.mode.labelRes), accent = true)
         }
         if (viewerUid != null) {
-            Membership(pod, now, viewerUid, isBusy, onJoin, onLeave)
+            Membership(pod, now, viewerUid, isBusy, onJoin, onLeave, onCancel)
         }
     }
 }
@@ -86,9 +94,10 @@ private fun Membership(
     isBusy: Boolean,
     onJoin: () -> Unit,
     onLeave: () -> Unit,
+    onCancel: () -> Unit,
 ) {
     when {
-        pod.hostUid == viewerUid -> MembershipNote(stringResource(R.string.pod_you_host))
+        pod.hostUid == viewerUid -> HostRow(isBusy, onCancel)
         pod.hasMember(viewerUid) -> Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.pod_you_joined),
@@ -108,6 +117,49 @@ private fun Membership(
         }
         // A full pod already says so in its badge.
         !pod.isFull -> MembershipNote(stringResource(R.string.pod_join_closed))
+    }
+}
+
+@Composable
+private fun HostRow(isBusy: Boolean, onCancel: () -> Unit) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.pod_you_host),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedButton(
+            onClick = { confirming = true },
+            enabled = !isBusy,
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            ButtonLabel(R.string.pod_cancel, R.string.pod_canceling, isBusy)
+        }
+    }
+    // Canceling can't be undone, so it always asks first.
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(stringResource(R.string.pod_cancel_title)) },
+            text = { Text(stringResource(R.string.pod_cancel_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirming = false
+                        onCancel()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) {
+                    Text(stringResource(R.string.pod_cancel))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirming = false }) {
+                    Text(stringResource(R.string.pod_keep))
+                }
+            },
+        )
     }
 }
 

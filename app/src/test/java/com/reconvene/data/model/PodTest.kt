@@ -45,6 +45,14 @@ class PodTest {
     }
 
     @Test
+    fun onlyTheHostCanCancelAndOnlyBeforeTheEnd() {
+        assertNull(pod.cancelProblem("host", start.plus(Duration.ofMinutes(59))))
+        assertEquals(PodActionProblem.CLOSED, pod.cancelProblem("host", start.plus(Duration.ofMinutes(60))))
+        assertEquals(PodActionProblem.NOT_HOST, pod.cancelProblem("member-1", start))
+        assertNull(pod.copy(canceled = true).cancelProblem("host", start))
+    }
+
+    @Test
     fun addingAMemberTwiceKeepsOneCopy() {
         val alex = PodMember(uid = "alex", name = "Alex")
         val joined = pod.withMember(alex)

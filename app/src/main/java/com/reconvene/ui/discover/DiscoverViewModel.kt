@@ -57,19 +57,26 @@ class DiscoverViewModel(
 
     fun retry() = loadPods()
 
-    fun join(podId: String) = changeMembership(podId) { user ->
+    fun join(podId: String) = changePod(podId) { user ->
         podRepository.joinPod(podId, user.asMember())
     }
 
-    fun leave(podId: String) = changeMembership(podId) { user ->
+    fun leave(podId: String) = changePod(podId) { user ->
         podRepository.leavePod(podId, user.uid)
+    }
+
+    // The card asks the host to confirm first. The pod then drops out of the list, so the message
+    // confirms where it went.
+    fun cancel(podId: String) = changePod(podId) { user ->
+        podRepository.cancelPod(podId, user.uid)
+        _message.value = PodMessage.CANCELED
     }
 
     fun messageShown() {
         _message.value = null
     }
 
-    private fun changeMembership(podId: String, change: suspend (SignedInUser) -> Unit) {
+    private fun changePod(podId: String, change: suspend (SignedInUser) -> Unit) {
         val user = viewer ?: return
         if (podId in busyPodIds.value) return
         busyPodIds.update { it + podId }
@@ -136,8 +143,9 @@ class DiscoverViewModel(
         PodActionProblem.FULL -> PodMessage.FULL
         PodActionProblem.CLOSED -> PodMessage.CLOSED
         PodActionProblem.NOT_FOUND -> PodMessage.GONE
-        // The card has no Leave button for the host, so this means something is out of date.
-        PodActionProblem.HOST_CANNOT_LEAVE -> PodMessage.FAILED
+        // The card shows Leave only to members and Cancel only to the host, so these mean the
+        // cached pod is out of date.
+        PodActionProblem.HOST_CANNOT_LEAVE, PodActionProblem.NOT_HOST -> PodMessage.FAILED
     }
 
     private enum class RefreshStatus { RUNNING, DONE, FAILED }

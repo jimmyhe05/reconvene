@@ -47,6 +47,13 @@ class OfflineFirstPodRepository(
         save { remote.leavePod(pod, uid) }
     }
 
+    override suspend fun cancelPod(podId: String, uid: String) {
+        val pod = cachedPod(podId)
+        pod.cancelProblem(uid, clock.instant())?.let { throw PodActionException(it) }
+        if (pod.canceled) return
+        save { remote.cancelPod(pod, uid) }
+    }
+
     private suspend fun cachedPod(podId: String): Pod =
         podDao.getById(podId)?.toPod() ?: throw PodActionException(PodActionProblem.NOT_FOUND)
 

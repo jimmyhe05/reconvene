@@ -24,8 +24,9 @@ sealed interface DiscoverUiState {
     ) : DiscoverUiState
 }
 
-// A one-off message after a join or leave didn't go through.
-enum class PodMessage { FULL, CLOSED, GONE, FAILED }
+// A one-off message after a join, leave or cancel: CANCELED confirms a cancel, the rest say why
+// something didn't go through.
+enum class PodMessage { CANCELED, FULL, CLOSED, GONE, FAILED }
 
 data class PodSection(val heading: SectionHeading, val pods: List<Pod>)
 

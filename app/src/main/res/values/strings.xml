@@ -47,6 +47,12 @@
     <string name="pod_you_host">You\'re hosting</string>
     <string name="pod_you_joined">You\'re going</string>
     <string name="pod_join_closed">Joining has closed</string>
+    <string name="pod_cancel">Cancel pod</string>
+    <string name="pod_canceling">Canceling</string>
+    <string name="pod_keep">Keep pod</string>
+    <string name="pod_cancel_title">Cancel this pod?</string>
+    <string name="pod_cancel_body">It will disappear from Discover for everyone, including people who joined. This can\'t be undone.</string>
+    <string name="pod_canceled">Pod canceled.</string>
     <string name="pod_error_full">That pod just filled up.</string>
     <string name="pod_error_closed">Joining that pod has closed.</string>
     <string name="pod_error_gone">That pod is no longer available.</string>

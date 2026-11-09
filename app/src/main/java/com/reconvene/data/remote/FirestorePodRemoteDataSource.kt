@@ -45,22 +45,31 @@ class FirestorePodRemoteDataSource(
 
     // A transaction reads the server's copy first, so a pod that filled up or closed since the last
     // refresh is refused here with the latest copy. The security rules check the same limits.
-    override suspend fun joinPod(pod: Pod, member: PodMember): Pod = changeMembers(pod.id) { transaction, document, latest ->
-        if (latest.hasMember(member.uid)) return@changeMembers latest
+    override suspend fun joinPod(pod: Pod, member: PodMember): Pod = changePod(pod.id) { transaction, document, latest ->
+        if (latest.hasMember(member.uid)) return@changePod latest
         latest.joinProblem(clock.instant())?.let { throw PodActionException(it, latest) }
         transaction.update(document, FieldPath.of(PodFields.MEMBERS, member.uid), member.name)
         latest.withMember(member)
     }
 
-    override suspend fun leavePod(pod: Pod, uid: String): Pod = changeMembers(pod.id) { transaction, document, latest ->
+    override suspend fun leavePod(pod: Pod, uid: String): Pod = changePod(pod.id) { transaction, document, latest ->
         if (latest.hostUid == uid) throw PodActionException(PodActionProblem.HOST_CANNOT_LEAVE, latest)
-        if (!latest.hasMember(uid)) return@changeMembers latest
+        if (!latest.hasMember(uid)) return@changePod latest
         transaction.update(document, FieldPath.of(PodFields.MEMBERS, uid), FieldValue.delete())
         latest.withoutMember(uid)
     }
 
+    // A transaction too, so canceling fails offline like joining does, instead of the button
+    // spinning until the network is back.
+    override suspend fun cancelPod(pod: Pod, uid: String): Pod = changePod(pod.id) { transaction, document, latest ->
+        latest.cancelProblem(uid, clock.instant())?.let { throw PodActionException(it, latest) }
+        if (latest.canceled) return@changePod latest
+        transaction.update(document, PodFields.CANCELED, true)
+        latest.copy(canceled = true)
+    }
+
     // Transactions need the network; offline this fails instead of queueing.
-    private suspend fun changeMembers(
+    private suspend fun changePod(
         podId: String,
         change: (Transaction, DocumentReference, Pod) -> Pod,
     ): Pod {

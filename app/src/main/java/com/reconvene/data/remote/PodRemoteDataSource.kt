@@ -15,4 +15,7 @@ interface PodRemoteDataSource {
     suspend fun joinPod(pod: Pod, member: PodMember): Pod
 
     suspend fun leavePod(pod: Pod, uid: String): Pod
+
+    // Only the host can cancel, and only before the pod ends.
+    suspend fun cancelPod(pod: Pod, uid: String): Pod
 }

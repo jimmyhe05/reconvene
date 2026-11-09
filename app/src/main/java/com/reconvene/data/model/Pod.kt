@@ -54,6 +54,14 @@ data class Pod(
         else -> null
     }
 
+    // Why this user can't cancel the pod now, or null if they can. Canceling twice is allowed and does nothing.
+    fun cancelProblem(uid: String, now: Instant): PodActionProblem? = when {
+        hostUid != uid -> PodActionProblem.NOT_HOST
+        canceled -> null
+        now >= endsAt -> PodActionProblem.CLOSED
+        else -> null
+    }
+
     fun withMember(member: PodMember): Pod =
         if (hasMember(member.uid)) this else copy(members = members + member)
 
@@ -64,7 +72,7 @@ enum class PodMode { QUIET, COORDINATE, TALK }
 
 enum class PodTiming { UPCOMING, ONGOING, ENDED, CANCELED }
 
-enum class PodActionProblem { FULL, CLOSED, NOT_FOUND, HOST_CANNOT_LEAVE }
+enum class PodActionProblem { FULL, CLOSED, NOT_FOUND, HOST_CANNOT_LEAVE, NOT_HOST }
 
 // latest is the pod as the server has it, when the server is what said no.
 class PodActionException(val problem: PodActionProblem, val latest: Pod? = null) :

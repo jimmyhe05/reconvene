@@ -140,6 +140,21 @@ class OfflineFirstPodRepositoryTest {
         val error = runCatching { repository.leavePod("a1", TEST_HOST.uid) }.exceptionOrNull()
         assertEquals(PodActionProblem.HOST_CANNOT_LEAVE, (error as PodActionException).problem)
     }
+
+    @Test
+    fun onlyTheHostCanCancel() = runTest {
+        val remote = TestPodRemoteDataSource { emptyList() }
+        podDao.upsertAll(listOf(testPod(id = "a1", startsAt = noon).withMember(terrier).toEntity()))
+        val repository = repository(remote)
+
+        val error = runCatching { repository.cancelPod("a1", terrier.uid) }.exceptionOrNull()
+        assertEquals(PodActionProblem.NOT_HOST, (error as PodActionException).problem)
+        assertEquals(0, remote.cancels)
+
+        repository.cancelPod("a1", TEST_HOST.uid)
+        assertTrue(cachedPod("a1").canceled)
+        assertEquals(1, remote.cancels)
+    }
 }
 
 private class TestPodRemoteDataSource(private val fetch: () -> List<Pod>) : PodRemoteDataSource {
@@ -160,6 +175,13 @@ private class TestPodRemoteDataSource(private val fetch: () -> List<Pod>) : PodR
     }
 
     override suspend fun leavePod(pod: Pod, uid: String): Pod = pod.withoutMember(uid)
+
+    var cancels = 0
+
+    override suspend fun cancelPod(pod: Pod, uid: String): Pod {
+        cancels++
+        return pod.copy(canceled = true)
+    }
 }
 
 private class FakePodDao : PodDao {

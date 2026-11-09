@@ -64,6 +64,7 @@ fun DiscoverScreen(
             onSignIn = onSignIn,
             onJoin = viewModel::join,
             onLeave = viewModel::leave,
+            onCancel = viewModel::cancel,
         ),
         message = message,
         onMessageShown = viewModel::messageShown,
@@ -77,6 +78,7 @@ data class PodListActions(
     val onSignIn: () -> Unit = {},
     val onJoin: (podId: String) -> Unit = {},
     val onLeave: (podId: String) -> Unit = {},
+    val onCancel: (podId: String) -> Unit = {},
 )
 
 @Composable
@@ -112,6 +114,7 @@ fun DiscoverContent(
 
 private val PodMessage.textRes: Int
     get() = when (this) {
+        PodMessage.CANCELED -> R.string.pod_canceled
         PodMessage.FULL -> R.string.pod_error_full
         PodMessage.CLOSED -> R.string.pod_error_closed
         PodMessage.GONE -> R.string.pod_error_gone
@@ -205,6 +208,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions) {
                             isBusy = pod.id in uiState.busyPodIds,
                             onJoin = { actions.onJoin(pod.id) },
                             onLeave = { actions.onLeave(pod.id) },
+                            onCancel = { actions.onCancel(pod.id) },
                         )
                     }
                 }

@@ -153,6 +153,29 @@ class DiscoverViewModelTest {
         viewModel.join("a1")
         assertEquals(PodMessage.FAILED, viewModel.message.value)
     }
+
+    @Test
+    fun canceledPodLeavesTheListWithAConfirmation() = runTest {
+        val viewModel = DiscoverViewModel(repository, auth, clock)
+        repository.finishRefresh(listOf(testPod(id = "a1", startsAt = minutesFromNow(30))))
+
+        viewModel.cancel("a1")
+
+        assertEquals(PodMessage.CANCELED, viewModel.message.value)
+        assertEquals(DiscoverUiState.Empty, viewModel.uiState.value)
+    }
+
+    @Test
+    fun failedCancelKeepsThePodAndSaysWhy() = runTest {
+        repository.cache(listOf(testPod(id = "a1", startsAt = minutesFromNow(30))))
+        val viewModel = DiscoverViewModel(repository, auth, clock)
+        repository.cancelError = IOException("Network unavailable")
+
+        viewModel.cancel("a1")
+
+        assertEquals(PodMessage.FAILED, viewModel.message.value)
+        assertTrue(viewModel.uiState.value is DiscoverUiState.Content)
+    }
 }
 
 private class TestPodRepository : PodRepository {
@@ -188,4 +211,11 @@ private class TestPodRepository : PodRepository {
     }
 
     override suspend fun leavePod(podId: String, uid: String) = Unit
+
+    var cancelError: Exception? = null
+
+    override suspend fun cancelPod(podId: String, uid: String) {
+        cancelError?.let { throw it }
+        cachedPods.value = cachedPods.value.map { if (it.id == podId) it.copy(canceled = true) else it }
+    }
 }
