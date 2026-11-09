@@ -168,6 +168,7 @@ fun CreatePodContent(
                 )
             }
             val problem = when {
+                uiState.signInRequired -> stringResource(R.string.create_sign_in_required)
                 uiState.saveFailed -> stringResource(R.string.create_save_failed)
                 !errors.isEmpty -> stringResource(R.string.create_fix_errors)
                 else -> null

@@ -1,6 +1,7 @@
 package com.reconvene.ui.create
 
 import com.reconvene.data.model.Pod
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import java.io.Serializable
 import java.time.Duration
@@ -93,7 +94,7 @@ fun CreatePodForm.validate(now: Instant, zone: ZoneId): FormErrors {
     )
 }
 
-fun CreatePodForm.toPod(id: String, hostName: String, zone: ZoneId) = Pod(
+fun CreatePodForm.toPod(id: String, host: PodMember, zone: ZoneId) = Pod(
     id = id,
     title = title.trim(),
     course = course.trim().ifEmpty { null },
@@ -102,7 +103,8 @@ fun CreatePodForm.toPod(id: String, hostName: String, zone: ZoneId) = Pod(
     startsAt = startsAt(zone),
     endsAt = endsAt(zone),
     capacity = capacity,
-    hostName = hostName,
-    memberNames = listOf(hostName),
+    hostUid = host.uid,
+    hostName = host.name,
+    members = listOf(host),
     mode = mode,
 )

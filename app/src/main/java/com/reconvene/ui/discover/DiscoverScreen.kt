@@ -15,10 +15,14 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -46,41 +50,91 @@ import java.time.ZoneId
 @Composable
 fun DiscoverScreen(
     onCreatePod: () -> Unit,
+    onSignIn: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(factory = DiscoverViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    DiscoverContent(uiState = uiState, onRetry = viewModel::retry, onCreatePod = onCreatePod, modifier = modifier)
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    DiscoverContent(
+        uiState = uiState,
+        actions = PodListActions(
+            onRetry = viewModel::retry,
+            onCreatePod = onCreatePod,
+            onSignIn = onSignIn,
+            onJoin = viewModel::join,
+            onLeave = viewModel::leave,
+            onCancel = viewModel::cancel,
+        ),
+        message = message,
+        onMessageShown = viewModel::messageShown,
+        modifier = modifier,
+    )
 }
+
+data class PodListActions(
+    val onRetry: () -> Unit = {},
+    val onCreatePod: () -> Unit = {},
+    val onSignIn: () -> Unit = {},
+    val onJoin: (podId: String) -> Unit = {},
+    val onLeave: (podId: String) -> Unit = {},
+    val onCancel: (podId: String) -> Unit = {},
+)
 
 @Composable
 fun DiscoverContent(
     uiState: DiscoverUiState,
-    onRetry: () -> Unit,
-    onCreatePod: () -> Unit,
+    actions: PodListActions,
     modifier: Modifier = Modifier,
+    message: PodMessage? = null,
+    onMessageShown: () -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val messageText = message?.let { stringResource(it.textRes) }
+    LaunchedEffect(message) {
+        if (messageText != null) {
+            snackbarHostState.showSnackbar(messageText)
+            onMessageShown()
+        }
+    }
     Box(modifier = modifier.fillMaxSize()) {
-        PodList(uiState = uiState, onRetry = onRetry, onCreatePod = onCreatePod)
-        ExtendedFloatingActionButton(
-            onClick = onCreatePod,
-            icon = {
-                Icon(painterResource(R.drawable.ic_plus), contentDescription = stringResource(R.string.action_create_pod))
-            },
-            text = { Text(stringResource(R.string.action_create_pod)) },
+        PodList(uiState = uiState, actions = actions)
+        if (uiState != DiscoverUiState.SignedOut) {
+            CreatePodButton(actions.onCreatePod, Modifier.align(Alignment.BottomEnd))
+        }
+        // Above the Create pod button, so it doesn't cover it.
+        SnackbarHost(
+            hostState = snackbarHostState,
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp),
         )
     }
 }
 
+private val PodMessage.textRes: Int
+    get() = when (this) {
+        PodMessage.CANCELED -> R.string.pod_canceled
+        PodMessage.FULL -> R.string.pod_error_full
+        PodMessage.CLOSED -> R.string.pod_error_closed
+        PodMessage.GONE -> R.string.pod_error_gone
+        PodMessage.FAILED -> R.string.pod_error_failed
+    }
+
 @Composable
-private fun PodList(
-    uiState: DiscoverUiState,
-    onRetry: () -> Unit,
-    onCreatePod: () -> Unit,
-) {
+private fun CreatePodButton(onCreatePod: () -> Unit, modifier: Modifier) {
+    ExtendedFloatingActionButton(
+        onClick = onCreatePod,
+        icon = {
+            Icon(painterResource(R.drawable.ic_plus), contentDescription = stringResource(R.string.action_create_pod))
+        },
+        text = { Text(stringResource(R.string.action_create_pod)) },
+        modifier = modifier.padding(16.dp),
+    )
+}
+
+@Composable
+private fun PodList(uiState: DiscoverUiState, actions: PodListActions) {
     val loadingLabel = stringResource(R.string.discover_loading)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -112,7 +166,7 @@ private fun PodList(
                     title = stringResource(R.string.discover_empty_title),
                     body = stringResource(R.string.discover_empty_body),
                     action = {
-                        Button(onClick = onCreatePod) {
+                        Button(onClick = actions.onCreatePod) {
                             Text(stringResource(R.string.action_create_pod))
                         }
                     },
@@ -124,8 +178,20 @@ private fun PodList(
                     title = stringResource(R.string.discover_error_title),
                     body = stringResource(R.string.discover_error_body),
                     action = {
-                        FilledTonalButton(onClick = onRetry) {
+                        FilledTonalButton(onClick = actions.onRetry) {
                             Text(stringResource(R.string.action_retry))
+                        }
+                    },
+                )
+            }
+            DiscoverUiState.SignedOut -> item(key = "signed-out") {
+                EmptyState(
+                    icon = R.drawable.ic_user,
+                    title = stringResource(R.string.discover_signed_out_title),
+                    body = stringResource(R.string.discover_signed_out_body),
+                    action = {
+                        Button(onClick = actions.onSignIn) {
+                            Text(stringResource(R.string.action_sign_in))
                         }
                     },
                 )
@@ -134,7 +200,17 @@ private fun PodList(
                 val today = uiState.now.atZone(ZoneId.systemDefault()).toLocalDate()
                 uiState.sections.forEach { section ->
                     item(key = "section-${section.heading}") { SectionHeader(section, today) }
-                    items(section.pods, key = { it.id }) { pod -> PodCard(pod, uiState.now) }
+                    items(section.pods, key = { it.id }) { pod ->
+                        PodCard(
+                            pod = pod,
+                            now = uiState.now,
+                            viewerUid = uiState.viewerUid,
+                            isBusy = pod.id in uiState.busyPodIds,
+                            onJoin = { actions.onJoin(pod.id) },
+                            onLeave = { actions.onLeave(pod.id) },
+                            onCancel = { actions.onCancel(pod.id) },
+                        )
+                    }
                 }
             }
         }
@@ -185,6 +261,7 @@ private class DiscoverStateProvider : PreviewParameterProvider<DiscoverUiState> 
         DiscoverUiState.Loading,
         DiscoverUiState.Empty,
         DiscoverUiState.Error,
+        DiscoverUiState.SignedOut,
     )
 }
 
@@ -195,7 +272,7 @@ private fun DiscoverContentPreview(
 ) {
     ReconveneTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
-            DiscoverContent(uiState = uiState, onRetry = {}, onCreatePod = {})
+            DiscoverContent(uiState = uiState, actions = PodListActions())
         }
     }
 }

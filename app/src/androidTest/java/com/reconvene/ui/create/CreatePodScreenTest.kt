@@ -12,7 +12,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.reconvene.R
+import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.model.Pod
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.ui.theme.ReconveneTheme
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +37,7 @@ class CreatePodScreenTest {
     private val zone = ZoneId.of("America/New_York")
     private val clock = Clock.fixed(ZonedDateTime.of(2026, 11, 10, 14, 0, 0, 0, zone).toInstant(), zone)
     private val repository = RecordingPodRepository()
-    private val viewModel = CreatePodViewModel(SavedStateHandle(), repository, clock, hostName = "You")
+    private val viewModel = CreatePodViewModel(SavedStateHandle(), repository, clock, UnavailableAuthRepository)
     private var created = false
 
     private fun string(@StringRes id: Int, vararg args: Any): String =
@@ -76,4 +78,10 @@ private class RecordingPodRepository : PodRepository {
     override suspend fun createPod(pod: Pod) {
         created += pod
     }
+
+    override suspend fun joinPod(podId: String, member: PodMember) = Unit
+
+    override suspend fun leavePod(podId: String, uid: String) = Unit
+
+    override suspend fun cancelPod(podId: String, uid: String) = Unit
 }

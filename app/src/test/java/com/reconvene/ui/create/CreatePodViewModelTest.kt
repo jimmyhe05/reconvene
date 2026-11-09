@@ -1,9 +1,13 @@
 package com.reconvene.ui.create
 
 import androidx.lifecycle.SavedStateHandle
+import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.model.Pod
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.testing.MainDispatcherRule
+import com.reconvene.testing.TERRIER
+import com.reconvene.testing.TestAuthRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -30,7 +34,8 @@ class CreatePodViewModelTest {
     private val clock = Clock.fixed(ZonedDateTime.of(2026, 11, 10, 14, 0, 0, 0, zone).toInstant(), zone)
     private val repository = RecordingPodRepository()
     private val savedState = SavedStateHandle()
-    private val viewModel = CreatePodViewModel(savedState, repository, clock, hostName = "You")
+    private val auth = TestAuthRepository()
+    private val viewModel = CreatePodViewModel(savedState, repository, clock, auth)
 
     private fun fillIn() = viewModel.updateForm(
         viewModel.uiState.value.form.copy(
@@ -63,7 +68,7 @@ class CreatePodViewModelTest {
     }
 
     @Test
-    fun validFormSavesAPodHostedByYou() {
+    fun validFormSavesAPodHostedByTheSignedInUser() {
         fillIn()
 
         viewModel.create()
@@ -71,14 +76,37 @@ class CreatePodViewModelTest {
         assertTrue(viewModel.uiState.value.isCreated)
         val pod = repository.created.single()
         assertEquals("Algorithms exam review", pod.title)
-        assertEquals("You", pod.hostName)
+        assertEquals(TERRIER.uid, pod.hostUid)
+        assertEquals(listOf(PodMember(TERRIER.uid, "Terrier")), pod.members)
+    }
+
+    @Test
+    fun signedOutUserIsAskedToSignInInsteadOfSaving() {
+        auth.currentUser.value = null
+        fillIn()
+
+        viewModel.create()
+
+        assertTrue(viewModel.uiState.value.signInRequired)
+        assertFalse(viewModel.uiState.value.isSaving)
+        assertTrue(repository.created.isEmpty())
+    }
+
+    @Test
+    fun withoutFirebaseThePodIsHostedByYou() {
+        val local = CreatePodViewModel(SavedStateHandle(), repository, clock, UnavailableAuthRepository)
+        local.updateForm(viewModel.uiState.value.form.copy(title = "Quiet hour", building = "GSU", meetingPoint = "Back tables"))
+
+        local.create()
+
+        assertEquals("You", repository.created.single().hostName)
     }
 
     @Test
     fun formComesBackFromSavedStateAfterProcessDeath() {
         fillIn()
 
-        val restored = CreatePodViewModel(savedState, repository, clock, hostName = "You")
+        val restored = CreatePodViewModel(savedState, repository, clock, auth)
 
         assertEquals(viewModel.uiState.value.form, restored.uiState.value.form)
     }
@@ -86,7 +114,7 @@ class CreatePodViewModelTest {
     @Test
     fun todayMovesOnAfterMidnightOnResumeAndOnEdits() {
         val movingClock = MovingClock(ZonedDateTime.of(2026, 11, 10, 23, 50, 0, 0, zone).toInstant(), zone)
-        val lateNight = CreatePodViewModel(SavedStateHandle(), repository, movingClock, hostName = "You")
+        val lateNight = CreatePodViewModel(SavedStateHandle(), repository, movingClock, auth)
         assertEquals(LocalDate.of(2026, 11, 10), lateNight.uiState.value.today)
 
         movingClock.now = movingClock.now.plus(Duration.ofMinutes(20))
@@ -133,4 +161,10 @@ private class RecordingPodRepository : PodRepository {
         if (shouldFail) throw IOException("Disk full")
         created += pod
     }
+
+    override suspend fun joinPod(podId: String, member: PodMember) = Unit
+
+    override suspend fun leavePod(podId: String, uid: String) = Unit
+
+    override suspend fun cancelPod(podId: String, uid: String) = Unit
 }

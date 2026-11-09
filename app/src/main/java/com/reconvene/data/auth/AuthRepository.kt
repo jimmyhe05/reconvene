@@ -1,5 +1,7 @@
 package com.reconvene.data.auth
 
+import com.reconvene.data.model.MEMBER_NAME_MAX
+import com.reconvene.data.model.PodMember
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -39,4 +41,18 @@ object UnavailableAuthRepository : AuthRepository {
     override suspend fun signInWithGoogleIdToken(idToken: String): SignedInUser =
         throw UnsupportedOperationException("Sign-in needs the Firebase settings in local.properties")
     override suspend fun signOut() = Unit
+}
+
+// Stands in for a signed-in user when the build has no Firebase settings. Pods then never leave
+// the device, so creating and joining sample pods still works for CI and a clean checkout.
+val LOCAL_USER = SignedInUser(uid = "local-user", email = "", displayName = "You")
+
+// Who creates and joins pods: the signed-in BU user, LOCAL_USER without Firebase, or null when
+// signed out.
+fun AuthRepository.actingUser(): Flow<SignedInUser?> = if (isAvailable) currentUser else flowOf(LOCAL_USER)
+
+// How the user appears on a pod: their Google name, or the start of their email without one.
+fun SignedInUser.asMember(): PodMember {
+    val name = displayName?.trim()?.takeIf { it.isNotEmpty() } ?: email.substringBefore('@')
+    return PodMember(uid = uid, name = name.take(MEMBER_NAME_MAX))
 }

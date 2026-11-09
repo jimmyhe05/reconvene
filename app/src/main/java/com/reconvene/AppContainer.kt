@@ -19,7 +19,6 @@ import java.time.Clock
 
 class AppContainer(context: Context) {
     val clock: Clock = Clock.systemDefaultZone()
-    val currentUserName = "You"
     val googleWebClientId: String = BuildConfig.FIREBASE_WEB_CLIENT_ID
 
     // Null when local.properties has no Firebase settings (see firebase/README.md).
@@ -29,11 +28,12 @@ class AppContainer(context: Context) {
         context,
         ReconveneDatabase::class.java,
         "reconvene.db",
-    ).build()
+    ).fallbackToDestructiveMigration(dropAllTables = true).build()
 
     val podRepository: PodRepository = OfflineFirstPodRepository(
         podDao = database.podDao(),
         remote = podRemoteDataSource(),
+        clock = clock,
     )
 
     val authRepository: AuthRepository =

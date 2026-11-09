@@ -67,7 +67,10 @@ fun ReconveneApp() {
                 .consumeWindowInsets(innerPadding),
         ) {
             composable<DiscoverRoute> {
-                DiscoverScreen(onCreatePod = dropUnlessResumed { navController.navigate(CreatePodRoute) })
+                DiscoverScreen(
+                    onCreatePod = dropUnlessResumed { navController.navigate(CreatePodRoute) },
+                    onSignIn = { navController.navigateToTab(TopLevelDestination.PROFILE) },
+                )
             }
             composable<GroupsRoute> { GroupsScreen() }
             composable<ProfileRoute> { ProfileScreen() }
