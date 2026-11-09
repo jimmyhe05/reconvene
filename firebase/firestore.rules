@@ -4,7 +4,8 @@ rules_version = '2';
 // - Create: the creator must be the host and the only member.
 // - Update: a user may add or remove only themselves in members. Joining stops at capacity and
 //   10 minutes before the end. The host can't leave.
-// - Delete: never (cancelling a pod will be its own update later).
+// - Cancel: only the host, only canceled going from false to true, and only before the pod ends.
+// - Delete: never. Hosts cancel instead, which keeps the pod on record.
 //
 // Field names and limits must match PodFields in FirestorePodMapping.kt, the limits in CreatePodForm.kt,
 // and JOIN_CUTOFF and MEMBER_NAME_MAX in Pod.kt.
@@ -15,7 +16,8 @@ service cloud.firestore {
       allow read: if isBuUser();
       allow create: if isBuUser() && podId.size() <= 64 && isValidNewPod(request.resource.data);
       allow update: if isBuUser() && (isJoin(resource.data, request.resource.data)
-                                       || isLeave(resource.data, request.resource.data));
+                                       || isLeave(resource.data, request.resource.data)
+                                       || isCancel(resource.data, request.resource.data));
       allow delete: if false;
     }
 
@@ -77,6 +79,15 @@ service cloud.firestore {
         && change.addedKeys().size() == 0
         && change.changedKeys().size() == 0
         && uid != before.hostUid;
+    }
+
+    // Only canceled changes, from false to true, by the host, before the end.
+    function isCancel(before, after) {
+      return after.diff(before).affectedKeys().hasOnly(['canceled'])
+        && before.canceled == false
+        && after.canceled == true
+        && request.auth.uid == before.hostUid
+        && request.time < before.endsAt;
     }
   }
 }

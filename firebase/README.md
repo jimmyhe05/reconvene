@@ -59,7 +59,8 @@ firebase deploy --only firestore:rules --project your-project-id
 
 Only verified @bu.edu users can read pods. A user can create a pod they host, and add or remove only
 themselves as a member: joining stops at capacity and 10 minutes before the end, and the host can't
-leave. Nobody can delete a pod. See the comment at the top of the file.
+leave. Only the host can cancel a pod, before it ends. Nobody can delete a pod. See the comment at the
+top of the file.
 
 Test the rules on the Firestore emulator before publishing a change. The emulator needs Java 21 (Android
 Studio's bundled JDK works) and the Firebase CLI.
@@ -71,6 +72,7 @@ Studio's bundled JDK works) and the Firebase CLI.
 | Open Discover / Try again | `refresh()` asks the server (not Firestore's cache) for pods that haven't ended, and upserts them into Room. Offline, it fails and Room keeps the cached pods. |
 | Signed out | Discover asks the user to sign in and doesn't refresh, because the rules wouldn't let it read. |
 | Create a pod | Saved to Room first, then handed to Firestore. Firestore keeps the write on the device and sends it when the network is back, even after a restart. |
+| Cancel a pod | The host confirms, then a transaction sets `canceled` to true on the server copy. Like joining, it needs the network. Canceled pods drop out of Discover for everyone on their next refresh. |
 | Join or leave | A Firestore transaction reads the server's copy, checks capacity and the join cutoff, and adds or removes the user's own entry in `members`. Room changes only after the server agrees. Needs the network: offline, the card shows an error and nothing changes. |
 | Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 
@@ -90,4 +92,4 @@ Collection `pods`, document id = pod id (a UUID made on the device).
 | `hostName` | string | the host's Google name, 1 to 40 characters |
 | `members` | map of uid to name | everyone going, the host included; at most `capacity` entries |
 | `mode` | string | `QUIET`, `COORDINATE` or `TALK` |
-| `canceled` | boolean | always `false` on create |
+| `canceled` | boolean | `false` on create; only the host can set it to `true`, and never back |
