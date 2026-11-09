@@ -12,21 +12,39 @@ Without the settings below, the app builds and runs with sample pods instead (th
 3. Project settings → General → Add app → Android, package name `com.reconvene`. You can download
    `google-services.json` to read the values below from it, but keep it outside the repository. Skip the
    "Add Firebase SDK" Gradle steps; the app doesn't use the Google Services Gradle plugin.
+4. Security → Authentication → Sign-in method → Google → Enable, pick a support email, Save.
+   This creates the OAuth web client that sign-in needs.
 
 ## 2. Point your build at it (each developer)
 
-From Project settings → General → Your apps → the Android app (or from `google-services.json`: `project_id`,
-`mobilesdk_app_id` and `current_key`), copy three values into `local.properties` in the repository root.
-That file is gitignored, so the values never reach GitHub.
+1. Register your debug signing certificate, or Google sign-in fails on your builds. Print its fingerprints
+   (the debug keystore password is always `android`):
 
-```properties
-firebase.projectId=your-project-id
-firebase.appId=1:1234567890:android:abc123
-firebase.apiKey=AIza...
-```
+   ```bash
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
+   ```
 
-Rebuild. `AppContainer` switches to `FirestorePodRemoteDataSource` when `firebase.projectId` is set.
-Never commit `google-services.json` or these values.
+   Then Project settings → General → Your apps → the Android app → Add fingerprint, once for SHA-1 and
+   once for SHA-256. Every developer's machine has its own debug certificate.
+2. Download `google-services.json` again after that (keep it outside the repository) and copy four values
+   into `local.properties` in the repository root. That file is gitignored, so the values never reach GitHub.
+
+   | Property | Where it is in `google-services.json` |
+   |---|---|
+   | `firebase.projectId` | `project_info.project_id` |
+   | `firebase.appId` | `client[].client_info.mobilesdk_app_id` |
+   | `firebase.apiKey` | `client[].api_key[].current_key` |
+   | `firebase.webClientId` | `client[].oauth_client[]` entry with `client_type` 3, its `client_id` |
+
+   ```properties
+   firebase.projectId=your-project-id
+   firebase.appId=1:1234567890:android:abc123
+   firebase.apiKey=AIza...
+   firebase.webClientId=1234567890-abc.apps.googleusercontent.com
+   ```
+
+Rebuild. `AppContainer` uses Firestore and Firebase Auth when `firebase.projectId` is set, and sample pods
+with sign-in turned off otherwise. Never commit `google-services.json` or these values.
 
 ## 3. Deploy the security rules
 
