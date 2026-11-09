@@ -1,9 +1,11 @@
 # Firebase setup
 
-Reconvene reads and creates pods in Cloud Firestore. Room stays the source of truth on the device:
-Discover always shows what Room has, and a refresh copies upcoming pods from Firestore into Room.
+Reconvene reads, creates and joins pods in Cloud Firestore, and only signed-in users with a verified
+@bu.edu Google account can do any of that. Room stays the source of truth on the device: Discover always
+shows what Room has, and a refresh copies upcoming pods from Firestore into Room.
 
 Without the settings below, the app builds and runs with sample pods instead (this is what CI does).
+Sign-in is then turned off and you create and join pods as a local "You"; nothing leaves the device.
 
 ## 1. Create the project (once per team)
 
@@ -55,16 +57,22 @@ console and publish, or use the Firebase CLI from this folder:
 firebase deploy --only firestore:rules --project your-project-id
 ```
 
-The current rules are temporary until bu.edu sign-in exists: anyone can read pods and create a pod that
-passes the field checks, and nobody can edit or delete one. See the comment at the top of the file.
+Only verified @bu.edu users can read pods. A user can create a pod they host, and add or remove only
+themselves as a member: joining stops at capacity and 10 minutes before the end, and the host can't
+leave. Nobody can delete a pod. See the comment at the top of the file.
+
+Test the rules on the Firestore emulator before publishing a change. The emulator needs Java 21 (Android
+Studio's bundled JDK works) and the Firebase CLI.
 
 ## How sync works
 
 | Action | What happens |
 |---|---|
 | Open Discover / Try again | `refresh()` asks the server (not Firestore's cache) for pods that haven't ended, and upserts them into Room. Offline, it fails and Room keeps the cached pods. |
+| Signed out | Discover asks the user to sign in and doesn't refresh, because the rules wouldn't let it read. |
 | Create a pod | Saved to Room first, then handed to Firestore. Firestore keeps the write on the device and sends it when the network is back, even after a restart. |
-| Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. |
+| Join or leave | A Firestore transaction reads the server's copy, checks capacity and the join cutoff, and adds or removes the user's own entry in `members`. Room changes only after the server agrees. Needs the network: offline, the card shows an error and nothing changes. |
+| Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 
 ## Data model
 
@@ -78,7 +86,8 @@ Collection `pods`, document id = pod id (a UUID made on the device).
 | `meetingPoint` | string | 3 to 80 characters |
 | `startsAt`, `endsAt` | timestamp | 30 minutes to 4 hours apart; start within 7 days |
 | `capacity` | number | 2 to 8 |
-| `hostName` | string | `"You"` until sign-in exists |
-| `memberNames` | array of strings | the host only, until joining exists |
+| `hostUid` | string | Firebase Auth uid of the host, who made the pod |
+| `hostName` | string | the host's Google name, 1 to 40 characters |
+| `members` | map of uid to name | everyone going, the host included; at most `capacity` entries |
 | `mode` | string | `QUIET`, `COORDINATE` or `TALK` |
 | `canceled` | boolean | always `false` on create |
