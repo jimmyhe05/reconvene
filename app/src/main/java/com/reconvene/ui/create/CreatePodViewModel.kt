@@ -9,11 +9,15 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.reconvene.ReconveneApplication
+import com.reconvene.data.auth.AuthRepository
+import com.reconvene.data.auth.actingUser
+import com.reconvene.data.auth.asMember
 import com.reconvene.data.repository.PodRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -27,6 +31,8 @@ data class CreatePodUiState(
     val errors: FormErrors = FormErrors(),
     val isSaving: Boolean = false,
     val saveFailed: Boolean = false,
+    // Discover hides Create pod when signed out, so this only shows if the user signed out meanwhile.
+    val signInRequired: Boolean = false,
     val isCreated: Boolean = false,
 )
 
@@ -34,7 +40,7 @@ class CreatePodViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val podRepository: PodRepository,
     private val clock: Clock,
-    private val hostName: String,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -69,10 +75,15 @@ class CreatePodViewModel(
         _uiState.update { it.copy(errors = errors) }
         if (!errors.isEmpty) return
 
-        _uiState.update { it.copy(isSaving = true, saveFailed = false) }
+        _uiState.update { it.copy(isSaving = true, saveFailed = false, signInRequired = false) }
         viewModelScope.launch {
+            val host = authRepository.actingUser().first()
+            if (host == null) {
+                _uiState.update { it.copy(isSaving = false, signInRequired = true) }
+                return@launch
+            }
             try {
-                podRepository.createPod(form.toPod(UUID.randomUUID().toString(), hostName, clock.zone))
+                podRepository.createPod(form.toPod(UUID.randomUUID().toString(), host.asMember(), clock.zone))
                 _uiState.update { it.copy(isSaving = false, isCreated = true) }
             } catch (e: CancellationException) {
                 throw e
@@ -94,7 +105,7 @@ class CreatePodViewModel(
                     savedStateHandle = createSavedStateHandle(),
                     podRepository = container.podRepository,
                     clock = container.clock,
-                    hostName = container.currentUserName,
+                    authRepository = container.authRepository,
                 )
             }
         }

@@ -1,6 +1,7 @@
 package com.reconvene.ui.discover
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -11,10 +12,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -35,8 +41,17 @@ import com.reconvene.ui.components.Tag
 import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Instant
 
+// viewerUid is null when nobody can join (no signed-in user), which hides the Join and Leave buttons.
 @Composable
-fun PodCard(pod: Pod, now: Instant, modifier: Modifier = Modifier) {
+fun PodCard(
+    pod: Pod,
+    now: Instant,
+    modifier: Modifier = Modifier,
+    viewerUid: String? = null,
+    isBusy: Boolean = false,
+    onJoin: () -> Unit = {},
+    onLeave: () -> Unit = {},
+) {
     PodCardSurface(modifier.semantics(mergeDescendants = true) {}) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             pod.course?.let { Tag(it) }
@@ -57,6 +72,60 @@ fun PodCard(pod: Pod, now: Instant, modifier: Modifier = Modifier) {
             )
             Tag(stringResource(pod.mode.labelRes), accent = true)
         }
+        if (viewerUid != null) {
+            Membership(pod, now, viewerUid, isBusy, onJoin, onLeave)
+        }
+    }
+}
+
+@Composable
+private fun Membership(
+    pod: Pod,
+    now: Instant,
+    viewerUid: String,
+    isBusy: Boolean,
+    onJoin: () -> Unit,
+    onLeave: () -> Unit,
+) {
+    when {
+        pod.hostUid == viewerUid -> MembershipNote(stringResource(R.string.pod_you_host))
+        pod.hasMember(viewerUid) -> Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.pod_you_joined),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedButton(onClick = onLeave, enabled = !isBusy, modifier = Modifier.heightIn(min = 48.dp)) {
+                ButtonLabel(R.string.pod_leave, R.string.pod_leaving, isBusy)
+            }
+        }
+        pod.joinProblem(now) == null -> Button(
+            onClick = onJoin,
+            enabled = !isBusy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        ) {
+            ButtonLabel(R.string.pod_join, R.string.pod_joining, isBusy)
+        }
+        // A full pod already says so in its badge.
+        !pod.isFull -> MembershipNote(stringResource(R.string.pod_join_closed))
+    }
+}
+
+@Composable
+private fun MembershipNote(text: String) {
+    Text(text, style = MaterialTheme.typography.labelLarge, color = ReconveneTheme.colors.inkMuted)
+}
+
+@Composable
+private fun ButtonLabel(@StringRes idle: Int, @StringRes busy: Int, isBusy: Boolean) {
+    if (isBusy) {
+        val busyLabel = stringResource(busy)
+        CircularProgressIndicator(
+            modifier = Modifier.size(20.dp).semantics { contentDescription = busyLabel },
+            strokeWidth = 2.dp,
+        )
+    } else {
+        Text(stringResource(idle))
     }
 }
 

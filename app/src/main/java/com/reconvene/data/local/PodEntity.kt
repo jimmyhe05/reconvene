@@ -3,6 +3,7 @@ package com.reconvene.data.local
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.reconvene.data.model.Pod
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import java.time.Instant
 
@@ -16,8 +17,9 @@ data class PodEntity(
     val startsAt: Instant,
     val endsAt: Instant,
     val capacity: Int,
+    val hostUid: String,
     val hostName: String,
-    val memberNames: List<String>,
+    val members: List<PodMember>,
     val mode: PodMode,
     val canceled: Boolean,
 )
@@ -31,8 +33,9 @@ fun PodEntity.toPod() = Pod(
     startsAt = startsAt,
     endsAt = endsAt,
     capacity = capacity,
+    hostUid = hostUid,
     hostName = hostName,
-    memberNames = memberNames,
+    members = members,
     mode = mode,
     canceled = canceled,
 )
@@ -46,8 +49,9 @@ fun Pod.toEntity() = PodEntity(
     startsAt = startsAt,
     endsAt = endsAt,
     capacity = capacity,
+    hostUid = hostUid,
     hostName = hostName,
-    memberNames = memberNames,
+    members = members,
     mode = mode,
     canceled = canceled,
 )

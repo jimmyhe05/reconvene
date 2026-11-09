@@ -1,5 +1,6 @@
 package com.reconvene.ui.create
 
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -77,13 +78,15 @@ class CreatePodFormTest {
     fun validFormBecomesATrimmedPodHostedByTheCreator() {
         assertTrue(validForm.validate(at(14, 0).toInstant(), zone).isEmpty)
 
-        val pod = validForm.toPod(id = "new", hostName = "You", zone = zone)
+        val host = PodMember(uid = "terrier", name = "Terrier")
+        val pod = validForm.toPod(id = "new", host = host, zone = zone)
 
         assertEquals("Algorithms exam review", pod.title)
         assertNull(pod.course)
         assertEquals("2nd floor", pod.meetingPoint)
         assertEquals(at(15, 0).toInstant(), pod.startsAt)
         assertEquals(at(16, 30).toInstant(), pod.endsAt)
-        assertEquals(listOf("You"), pod.memberNames)
+        assertEquals("terrier", pod.hostUid)
+        assertEquals(listOf(host), pod.members)
     }
 }

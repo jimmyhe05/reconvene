@@ -1,5 +1,6 @@
 package com.reconvene.data.remote
 
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import com.reconvene.testing.testPod
 import org.junit.Assert.assertEquals
@@ -46,5 +47,26 @@ class FirestorePodMappingTest {
         val data = testPod(id = "a1", startsAt = noon, canceled = true).toFirestore()
 
         assertFalse(podFromFirestore("a1", data - PodFields.CANCELED)!!.canceled)
+    }
+
+    @Test
+    fun membersAreAMapFromUidToNameAndComeBackHostFirst() {
+        val data = testPod(id = "a1", startsAt = noon).toFirestore() + (
+            PodFields.MEMBERS to mapOf("zed" to "Alex", "host" to "Host", "abe" to "Zoe")
+        )
+
+        assertEquals(mapOf("host" to "Host"), testPod(id = "a1", startsAt = noon).toFirestore()[PodFields.MEMBERS])
+        assertEquals(
+            listOf(PodMember("host", "Host"), PodMember("zed", "Alex"), PodMember("abe", "Zoe")),
+            podFromFirestore("a1", data)!!.members,
+        )
+    }
+
+    @Test
+    fun documentFromBeforeSignInIsSkipped() {
+        val data = testPod(id = "a1", startsAt = noon).toFirestore()
+        val legacy = data - PodFields.HOST_UID - PodFields.MEMBERS + ("memberNames" to listOf("You"))
+
+        assertNull(podFromFirestore("a1", legacy))
     }
 }

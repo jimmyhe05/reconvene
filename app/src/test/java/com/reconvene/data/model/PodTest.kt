@@ -2,6 +2,8 @@ package com.reconvene.data.model
 
 import com.reconvene.testing.testPod
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
@@ -31,5 +33,24 @@ class PodTest {
         val overbooked = testPod(startsAt = start, capacity = 2, members = 3)
         assertEquals(0, overbooked.spotsLeft)
         assertTrue(overbooked.isFull)
+    }
+
+    @Test
+    fun joiningClosesWhenFullCanceledOrTenMinutesBeforeTheEnd() {
+        assertNull(pod.joinProblem(start.minusSeconds(60)))
+        assertNull(pod.joinProblem(start.plus(Duration.ofMinutes(49))))
+        assertEquals(PodActionProblem.CLOSED, pod.joinProblem(start.plus(Duration.ofMinutes(50))))
+        assertEquals(PodActionProblem.CLOSED, pod.copy(canceled = true).joinProblem(start))
+        assertEquals(PodActionProblem.FULL, testPod(startsAt = start, capacity = 2, members = 2).joinProblem(start))
+    }
+
+    @Test
+    fun addingAMemberTwiceKeepsOneCopy() {
+        val alex = PodMember(uid = "alex", name = "Alex")
+        val joined = pod.withMember(alex)
+
+        assertEquals(listOf("Host", "Alex"), joined.memberNames)
+        assertSame(joined, joined.withMember(alex))
+        assertEquals(pod, joined.withoutMember("alex"))
     }
 }

@@ -11,8 +11,21 @@ sealed interface DiscoverUiState {
     data object Loading : DiscoverUiState
     data object Empty : DiscoverUiState
     data object Error : DiscoverUiState
-    data class Content(val sections: List<PodSection>, val now: Instant) : DiscoverUiState
+
+    // Firebase is set up but nobody is signed in. Pods are only readable by signed-in BU users.
+    data object SignedOut : DiscoverUiState
+
+    data class Content(
+        val sections: List<PodSection>,
+        val now: Instant,
+        val viewerUid: String? = null,
+        // Pods with a join or leave waiting for the server.
+        val busyPodIds: Set<String> = emptySet(),
+    ) : DiscoverUiState
 }
+
+// A one-off message after a join or leave didn't go through.
+enum class PodMessage { FULL, CLOSED, GONE, FAILED }
 
 data class PodSection(val heading: SectionHeading, val pods: List<Pod>)
 

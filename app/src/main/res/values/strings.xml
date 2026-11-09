@@ -11,6 +11,9 @@
     <string name="discover_error_title">Couldn\'t load pods</string>
     <string name="discover_error_body">Check your connection and try again.</string>
     <string name="action_retry">Try again</string>
+    <string name="discover_signed_out_title">Sign in to find study pods</string>
+    <string name="discover_signed_out_body">Pods are only for BU students. Sign in with your BU Google account to see and join them.</string>
+    <string name="action_sign_in">Sign in</string>
 
     <string name="section_now_and_soon">Now and soon</string>
     <string name="section_later_today">Later today</string>
@@ -37,6 +40,17 @@
     <string name="pod_place">%1$s, %2$s</string>
     <string name="pod_hosted_by">Hosted by %1$s</string>
     <string name="pod_hosted_by_going">Hosted by %1$s, %2$d going</string>
+    <string name="pod_join">Join</string>
+    <string name="pod_joining">Joining</string>
+    <string name="pod_leave">Leave</string>
+    <string name="pod_leaving">Leaving</string>
+    <string name="pod_you_host">You\'re hosting</string>
+    <string name="pod_you_joined">You\'re going</string>
+    <string name="pod_join_closed">Joining has closed</string>
+    <string name="pod_error_full">That pod just filled up.</string>
+    <string name="pod_error_closed">Joining that pod has closed.</string>
+    <string name="pod_error_gone">That pod is no longer available.</string>
+    <string name="pod_error_failed">Couldn\'t reach the server. Check your connection and try again.</string>
 
     <string name="mode_quiet">Quiet company</string>
     <string name="mode_coordinate">Okay to coordinate</string>
@@ -75,6 +89,7 @@
     <string name="create_vibe">Vibe</string>
     <string name="create_fix_errors">Check the highlighted fields above.</string>
     <string name="create_save_failed">Couldn\'t save the pod. Try again.</string>
+    <string name="create_sign_in_required">Sign in with your BU Google account on Profile to create a pod.</string>
 
     <string name="mode_quiet_hint">Sit together and work. No chatting.</string>
     <string name="mode_coordinate_hint">Short check-ins and quick questions are fine.</string>

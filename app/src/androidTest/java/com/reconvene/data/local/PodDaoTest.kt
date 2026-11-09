@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.reconvene.data.model.Pod
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -67,8 +68,9 @@ class PodDaoTest {
         startsAt = startsAt,
         endsAt = startsAt.plusSeconds(5400),
         capacity = 4,
+        hostUid = "maya",
         hostName = "Maya",
-        memberNames = members,
+        members = members.map { PodMember(uid = it.lowercase(), name = it) },
         mode = PodMode.TALK,
     )
 }
