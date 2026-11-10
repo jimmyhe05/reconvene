@@ -94,12 +94,15 @@ fun CreatePodForm.validate(now: Instant, zone: ZoneId): FormErrors {
     )
 }
 
+// Pasted text can bring line breaks into a single-line field.
+fun String.toSingleLine(): String = replace(Regex("\\s*[\\r\\n]+\\s*"), " ")
+
 fun CreatePodForm.toPod(id: String, host: PodMember, zone: ZoneId) = Pod(
     id = id,
-    title = title.trim(),
-    course = course.trim().ifEmpty { null },
+    title = title.toSingleLine().trim(),
+    course = course.toSingleLine().trim().ifEmpty { null },
     building = requireNotNull(building),
-    meetingPoint = meetingPoint.trim(),
+    meetingPoint = meetingPoint.toSingleLine().trim(),
     startsAt = startsAt(zone),
     endsAt = endsAt(zone),
     capacity = capacity,

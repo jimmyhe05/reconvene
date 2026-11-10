@@ -89,4 +89,20 @@ class CreatePodFormTest {
         assertEquals("terrier", pod.hostUid)
         assertEquals(listOf(host), pod.members)
     }
+
+    @Test
+    fun pastedLineBreaksBecomeSpaces() {
+        val pasted = validForm.copy(
+            title = "Android Dev\n\n// rules comment",
+            course = "CS501\r\nE1",
+            meetingPoint = "GSU\nFloor 1\n",
+        )
+
+        val pod = pasted.toPod(id = "new", host = PodMember(uid = "terrier", name = "Terrier"), zone = zone)
+
+        assertEquals("Android Dev // rules comment", pod.title)
+        assertEquals("CS501 E1", pod.course)
+        assertEquals("GSU Floor 1", pod.meetingPoint)
+        assertEquals("Mugar Library", "Mugar\nLibrary".toSingleLine())
+    }
 }
