@@ -52,13 +52,23 @@ class CreatePodViewModel(
 
     private var submitted = false
 
+    // Once the user picks a day or time, a bad time shows right away, since the pickers can't stop
+    // every bad pair (an end before the start, or a time already over). Other fields wait for Create.
+    private var timeChanged = false
+
     fun updateForm(form: CreatePodForm) {
         savedStateHandle[FORM_KEY] = form
+        if (!form.hasSameTimeAs(_uiState.value.form)) timeChanged = true
+        val errors = validate(form)
         _uiState.update { state ->
             state.copy(
                 form = form,
                 today = LocalDate.now(clock),
-                errors = if (submitted) validate(form) else FormErrors(),
+                errors = when {
+                    submitted -> errors
+                    timeChanged -> FormErrors(time = errors.time)
+                    else -> FormErrors()
+                },
             )
         }
     }

@@ -326,7 +326,7 @@ private fun WhenField(
             title = stringResource(R.string.create_start_time),
             initial = form.startTime,
             onConfirm = {
-                onFormChange(form.copy(startTime = it))
+                onFormChange(form.withStartTime(it))
                 editing = null
             },
             onDismiss = { editing = null },
