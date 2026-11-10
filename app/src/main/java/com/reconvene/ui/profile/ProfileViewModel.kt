@@ -1,6 +1,7 @@
 package com.reconvene.ui.profile
 
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -20,7 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class SignInError { NOT_BU_ACCOUNT, FAILED }
+enum class SignInError { NOT_BU_ACCOUNT, NO_BU_ACCOUNT, FAILED }
 
 data class ProfileUiState(
     val isAvailable: Boolean,
@@ -63,6 +64,9 @@ class ProfileViewModel(
             authRepository.signInWithGoogleIdToken(getIdToken())
         } catch (e: GetCredentialCancellationException) {
             // The user closed the picker. Not an error.
+        } catch (e: NoCredentialException) {
+            // The picker only offers bu.edu accounts, and the device has none (or adding one wasn't finished).
+            error = SignInError.NO_BU_ACCOUNT
         } catch (e: NotBuAccountException) {
             error = SignInError.NOT_BU_ACCOUNT
         } catch (e: CancellationException) {
