@@ -1,6 +1,7 @@
 package com.reconvene.ui.profile
 
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.NotBuAccountException
 import com.reconvene.data.auth.SignedInUser
@@ -62,6 +63,18 @@ class ProfileViewModelTest {
         viewModel.signIn { throw GetCredentialCancellationException() }
 
         assertNull(viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isSigningIn)
+    }
+
+    @Test
+    fun noBuAccountOnTheDeviceSaysToAddOne() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+
+        viewModel.signIn { throw NoCredentialException() }
+
+        assertNull(viewModel.uiState.value.user)
+        assertEquals(SignInError.NO_BU_ACCOUNT, viewModel.uiState.value.error)
         assertFalse(viewModel.uiState.value.isSigningIn)
     }
 

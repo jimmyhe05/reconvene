@@ -110,8 +110,15 @@ private fun SignedOut(uiState: ProfileUiState, onSignIn: () -> Unit) {
             Text(stringResource(R.string.profile_sign_in))
         }
     }
+    // Google's own "add account" screen, which the app can't change, takes "name" as name@gmail.com.
+    Text(
+        text = stringResource(R.string.profile_sign_in_hint),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     val error = when (uiState.error) {
         SignInError.NOT_BU_ACCOUNT -> stringResource(R.string.profile_error_not_bu)
+        SignInError.NO_BU_ACCOUNT -> stringResource(R.string.profile_error_no_bu_account)
         SignInError.FAILED -> stringResource(R.string.profile_error_failed)
         null -> null
     }
