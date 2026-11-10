@@ -208,7 +208,7 @@ private fun FormTextField(
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = { onValueChange(it.take(maxLength)) },
+        onValueChange = { onValueChange(it.toSingleLine().take(maxLength)) },
         label = { Text(label) },
         placeholder = placeholder?.let { { Text(it) } },
         supportingText = {
