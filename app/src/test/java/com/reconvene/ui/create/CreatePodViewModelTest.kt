@@ -68,6 +68,21 @@ class CreatePodViewModelTest {
     }
 
     @Test
+    fun badTimeShowsRightAwayWithoutOtherErrors() {
+        val form = viewModel.uiState.value.form
+
+        viewModel.updateForm(form.copy(endTime = form.startTime.minusHours(1)))
+
+        val errors = viewModel.uiState.value.errors
+        assertEquals(FormError.END_NOT_AFTER_START, errors.time)
+        assertNull(errors.title)
+        assertNull(errors.building)
+
+        viewModel.updateForm(viewModel.uiState.value.form.withStartTime(LocalTime.of(15, 0)))
+        assertNull(viewModel.uiState.value.errors.time)
+    }
+
+    @Test
     fun validFormSavesAPodHostedByTheSignedInUser() {
         fillIn()
 

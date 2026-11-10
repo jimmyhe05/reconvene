@@ -39,14 +39,29 @@ data class CreatePodForm(
     fun startsAt(zone: ZoneId): Instant = day.atTime(startTime).atZone(zone).toInstant()
 
     fun endsAt(zone: ZoneId): Instant = day.atTime(endTime).atZone(zone).toInstant()
+
+    fun hasSameTimeAs(other: CreatePodForm): Boolean =
+        day == other.day && startTime == other.startTime && endTime == other.endTime
+
+    // Moving the start moves the end with it, keeping the length, so the end can't fall behind the
+    // start. A pod can't run past midnight, so the end stops at 23:59 and validation flags it if
+    // that's too short. If the current times are out of order, the length resets to the default.
+    fun withStartTime(start: LocalTime): CreatePodForm {
+        val length = Duration.between(startTime, endTime).takeIf { it > Duration.ZERO } ?: DEFAULT_DURATION
+        val end = start.plus(length)
+        return copy(startTime = start, endTime = if (end > start) end else LAST_END_TIME)
+    }
 }
+
+val DEFAULT_DURATION: Duration = Duration.ofMinutes(90)
+private val LAST_END_TIME: LocalTime = LocalTime.of(23, 59)
 
 // Next half hour at least 15 minutes away, for 90 minutes; tomorrow morning if that runs past midnight.
 fun newPodForm(now: ZonedDateTime): CreatePodForm {
     val earliest = now.plusMinutes(15)
     val hour = earliest.truncatedTo(ChronoUnit.HOURS)
     val start = listOf(0L, 30L, 60L).map { hour.plusMinutes(it) }.first { it >= earliest }
-    val end = start.plusMinutes(90)
+    val end = start.plus(DEFAULT_DURATION)
     return if (end.toLocalDate() == now.toLocalDate()) {
         CreatePodForm(day = now.toLocalDate(), startTime = start.toLocalTime(), endTime = end.toLocalTime())
     } else {

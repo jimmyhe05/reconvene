@@ -75,6 +75,33 @@ class CreatePodFormTest {
     }
 
     @Test
+    fun movingTheStartMovesTheEndAndKeepsTheLength() {
+        val later = validForm.withStartTime(LocalTime.of(17, 0))
+        assertEquals(LocalTime.of(17, 0) to LocalTime.of(18, 30), later.startTime to later.endTime)
+
+        val earlier = validForm.withStartTime(LocalTime.of(9, 15))
+        assertEquals(LocalTime.of(9, 15) to LocalTime.of(10, 45), earlier.startTime to earlier.endTime)
+    }
+
+    @Test
+    fun movingTheStartNearMidnightStopsTheEndAt2359() {
+        val late = validForm.withStartTime(LocalTime.of(23, 0))
+        assertEquals(LocalTime.of(23, 59), late.endTime)
+        assertNull(late.validate(at(14, 0).toInstant(), zone).time)
+
+        val tooLate = validForm.withStartTime(LocalTime.of(23, 45))
+        assertEquals(LocalTime.of(23, 59), tooLate.endTime)
+        assertEquals(FormError.TOO_SHORT, tooLate.validate(at(14, 0).toInstant(), zone).time)
+    }
+
+    @Test
+    fun movingTheStartOfOutOfOrderTimesUsesTheDefaultLength() {
+        val outOfOrder = validForm.copy(startTime = LocalTime.of(16, 0), endTime = LocalTime.of(15, 0))
+
+        assertEquals(LocalTime.of(14, 30), outOfOrder.withStartTime(LocalTime.of(13, 0)).endTime)
+    }
+
+    @Test
     fun validFormBecomesATrimmedPodHostedByTheCreator() {
         assertTrue(validForm.validate(at(14, 0).toInstant(), zone).isEmpty)
 
