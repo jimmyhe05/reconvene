@@ -14,8 +14,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -135,14 +140,7 @@ fun CreatePodContent(
                 maxLength = COURSE_MAX,
                 capitalization = KeyboardCapitalization.Characters,
             )
-            FieldGroup(label = stringResource(R.string.create_building), error = errors.building?.message()) {
-                ChoiceRow(
-                    options = buildings,
-                    selected = form.building,
-                    label = { it },
-                    onSelect = { onFormChange(form.copy(building = it)) },
-                )
-            }
+            BuildingField(form = form, hasError = errors.building != null, onFormChange = onFormChange)
             FormTextField(
                 value = form.meetingPoint,
                 onValueChange = { onFormChange(form.copy(meetingPoint = it)) },
@@ -222,6 +220,78 @@ private fun FormTextField(
         keyboardOptions = KeyboardOptions(capitalization = capitalization, imeAction = ImeAction.Next),
         modifier = modifier.fillMaxWidth(),
     )
+}
+
+// A menu of suggested buildings, plus "Other building", which opens a text field for any other name.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BuildingField(
+    form: CreatePodForm,
+    hasError: Boolean,
+    onFormChange: (CreatePodForm) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val other = stringResource(R.string.create_building_other)
+    // With "Other building" chosen, the error belongs to the name field below, not to the menu.
+    val menuError = hasError && !form.customBuilding
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = if (form.customBuilding) other else form.building.orEmpty(),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.create_building)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                supportingText = if (menuError) {
+                    { Text(stringResource(R.string.error_building_missing)) }
+                } else {
+                    null
+                },
+                isError = menuError,
+                modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth(),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                Text(
+                    text = stringResource(R.string.create_building_suggested),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+                suggestedBuildings.forEach { building ->
+                    DropdownMenuItem(
+                        text = { Text(building) },
+                        onClick = {
+                            onFormChange(form.copy(building = building, customBuilding = false))
+                            expanded = false
+                        },
+                    )
+                }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(other) },
+                    onClick = {
+                        // Choosing it again keeps a name that's already typed.
+                        if (!form.customBuilding) onFormChange(form.copy(building = "", customBuilding = true))
+                        expanded = false
+                    },
+                )
+            }
+        }
+        if (form.customBuilding) {
+            FormTextField(
+                value = form.building.orEmpty(),
+                onValueChange = { onFormChange(form.copy(building = it)) },
+                label = stringResource(R.string.create_building_name),
+                placeholder = stringResource(R.string.create_building_name_placeholder),
+                maxLength = BUILDING_MAX,
+                error = if (hasError) stringResource(R.string.error_building_name_missing) else null,
+                capitalization = KeyboardCapitalization.Words,
+            )
+        }
+    }
 }
 
 @Composable

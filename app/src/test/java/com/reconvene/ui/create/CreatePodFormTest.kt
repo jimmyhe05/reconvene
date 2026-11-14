@@ -118,6 +118,25 @@ class CreatePodFormTest {
     }
 
     @Test
+    fun customBuildingNeedsAName() {
+        val now = at(14, 0).toInstant()
+        val other = validForm.copy(building = "", customBuilding = true)
+
+        assertEquals(FormError.BUILDING_MISSING, other.validate(now, zone).building)
+        assertEquals(FormError.BUILDING_MISSING, other.copy(building = "   ").validate(now, zone).building)
+        assertNull(other.copy(building = "College of Fine Arts").validate(now, zone).building)
+    }
+
+    @Test
+    fun customBuildingIsTrimmedIntoThePod() {
+        val form = validForm.copy(building = "  College of\nFine Arts ", customBuilding = true)
+
+        val pod = form.toPod(id = "new", host = PodMember(uid = "terrier", name = "Terrier"), zone = zone)
+
+        assertEquals("College of Fine Arts", pod.building)
+    }
+
+    @Test
     fun pastedLineBreaksBecomeSpaces() {
         val pasted = validForm.copy(
             title = "Android Dev\n\n// rules comment",

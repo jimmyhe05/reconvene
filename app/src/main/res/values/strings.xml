@@ -75,6 +75,10 @@
     <string name="create_course">Course (optional)</string>
     <string name="create_course_hint">Like CS 501. Helps classmates find you.</string>
     <string name="create_building">Building</string>
+    <string name="create_building_suggested">Suggested</string>
+    <string name="create_building_other">Other building</string>
+    <string name="create_building_name">Building name</string>
+    <string name="create_building_name_placeholder">College of Fine Arts</string>
     <string name="create_meeting_point">Meeting point</string>
     <string name="create_meeting_point_placeholder">Floor 2, tables by the windows</string>
     <string name="create_meeting_point_hint">A public, specific spot. Never a private address.</string>
@@ -107,6 +111,7 @@
 
     <string name="error_topic_too_short">Enter a study topic, at least %d characters.</string>
     <string name="error_building_missing">Choose a building.</string>
+    <string name="error_building_name_missing">Enter the building\'s name.</string>
     <string name="error_meeting_point_too_short">Add a specific public spot, like a floor or an entrance.</string>
     <string name="error_end_not_after_start">The end time must be after the start time.</string>
     <string name="error_already_over">That time has already passed.</string>

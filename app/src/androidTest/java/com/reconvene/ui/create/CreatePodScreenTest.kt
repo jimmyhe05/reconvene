@@ -56,7 +56,8 @@ class CreatePodScreenTest {
         assertTrue(repository.created.isEmpty())
 
         composeRule.onNodeWithText(string(R.string.create_topic)).performScrollTo().performTextInput("Algorithms exam review")
-        composeRule.onNodeWithText("Mugar Library").performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
+        composeRule.onNodeWithText("Mugar Library").performClick()
         composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("2nd floor")
         composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
 
@@ -65,6 +66,25 @@ class CreatePodScreenTest {
         assertEquals("Algorithms exam review", pod.title)
         assertEquals("Mugar Library", pod.building)
         assertEquals("You", pod.hostName)
+    }
+
+    @Test
+    fun otherBuildingTakesATypedName() {
+        composeRule.setContent {
+            ReconveneTheme {
+                CreatePodScreen(onBack = {}, onCreated = { created = true }, viewModel = viewModel)
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.create_topic)).performScrollTo().performTextInput("Figure drawing practice")
+        composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.create_building_other)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.create_building_name)).performScrollTo().performTextInput("College of Fine Arts")
+        composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("Lobby")
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) { created }
+        assertEquals("College of Fine Arts", repository.created.single().building)
     }
 }
 

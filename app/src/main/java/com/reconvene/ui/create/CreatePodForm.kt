@@ -15,6 +15,7 @@ import java.time.temporal.ChronoUnit
 const val TOPIC_MIN = 3
 const val TOPIC_MAX = 60
 const val COURSE_MAX = 20
+const val BUILDING_MAX = 40
 const val MEETING_POINT_MIN = 3
 const val MEETING_POINT_MAX = 80
 const val CAPACITY_MIN = 2
@@ -23,12 +24,25 @@ const val START_WINDOW_DAYS = 7
 val MIN_DURATION: Duration = Duration.ofMinutes(30)
 val MAX_DURATION: Duration = Duration.ofHours(4)
 
-val buildings = listOf("Mugar Library", "CDS", "Photonics Center", "GSU", "Science & Engineering Library")
+// Most likely picks first. The form also takes any other building, typed in.
+val suggestedBuildings = listOf(
+    "Mugar Library",
+    "CDS",
+    "GSU",
+    "Questrom",
+    "Photonics Center",
+    "Science & Engineering Library",
+    "CAS",
+    "Kilachand Center",
+)
 
 data class CreatePodForm(
     val title: String = "",
     val course: String = "",
     val building: String? = null,
+    // True while the user is typing a building that isn't in the suggestions. A flag, not a lookup,
+    // so a typed name that happens to match a suggestion doesn't close the text field.
+    val customBuilding: Boolean = false,
     val meetingPoint: String = "",
     val day: LocalDate,
     val startTime: LocalTime,
@@ -97,7 +111,7 @@ fun CreatePodForm.validate(now: Instant, zone: ZoneId): FormErrors {
     val length = Duration.between(startsAt, endsAt)
     return FormErrors(
         title = FormError.TOPIC_TOO_SHORT.takeIf { title.trim().length < TOPIC_MIN },
-        building = FormError.BUILDING_MISSING.takeIf { building == null },
+        building = FormError.BUILDING_MISSING.takeIf { building.isNullOrBlank() },
         meetingPoint = FormError.MEETING_POINT_TOO_SHORT.takeIf { meetingPoint.trim().length < MEETING_POINT_MIN },
         time = when {
             !endsAt.isAfter(startsAt) -> FormError.END_NOT_AFTER_START
@@ -116,7 +130,7 @@ fun CreatePodForm.toPod(id: String, host: PodMember, zone: ZoneId) = Pod(
     id = id,
     title = title.toSingleLine().trim(),
     course = course.toSingleLine().trim().ifEmpty { null },
-    building = requireNotNull(building),
+    building = requireNotNull(building).toSingleLine().trim(),
     meetingPoint = meetingPoint.toSingleLine().trim(),
     startsAt = startsAt(zone),
     endsAt = endsAt(zone),
