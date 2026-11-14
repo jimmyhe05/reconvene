@@ -54,6 +54,16 @@ class CreatePodViewModelTest {
     }
 
     @Test
+    fun startSlotsFollowTheFormsDay() {
+        assertEquals(LocalTime.of(14, 30), viewModel.uiState.value.startSlots.first())
+
+        val tomorrow = viewModel.uiState.value.form.day.plusDays(1)
+        viewModel.updateForm(viewModel.uiState.value.form.copy(day = tomorrow))
+
+        assertEquals(LocalTime.of(10, 0), viewModel.uiState.value.startSlots.first())
+    }
+
+    @Test
     fun errorsAppearOnlyAfterCreateAndClearAsFieldsAreFixed() {
         viewModel.updateForm(viewModel.uiState.value.form.copy(title = "A"))
         assertTrue(viewModel.uiState.value.errors.isEmpty)

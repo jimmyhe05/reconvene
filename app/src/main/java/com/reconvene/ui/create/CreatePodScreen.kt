@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -24,7 +25,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -143,7 +143,13 @@ fun CreatePodContent(
             )
             BuildingField(form = form, hasError = errors.building != null, onFormChange = onFormChange)
             MeetingPointField(form = form, error = errors.meetingPoint?.message(), onFormChange = onFormChange)
-            WhenField(form = form, today = uiState.today, error = errors.time?.message(), onFormChange = onFormChange)
+            WhenField(
+                form = form,
+                today = uiState.today,
+                startSlots = uiState.startSlots,
+                error = errors.time?.message(),
+                onFormChange = onFormChange,
+            )
             FieldGroup(
                 label = stringResource(R.string.create_group_size),
                 hint = stringResource(R.string.create_group_size_hint, CAPACITY_MIN, CAPACITY_MAX),
@@ -306,11 +312,7 @@ private fun MeetingPointField(
             error = error,
         )
         if (suggestions.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.create_meeting_point_suggestions),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            FieldLabel(stringResource(R.string.create_meeting_point_suggestions))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 suggestions.forEach { spot ->
                     SuggestionChip(
@@ -355,11 +357,23 @@ private fun FieldGroup(
 }
 
 @Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+// A wrapping row of chips where one can be selected. trailing adds extra chips after the options.
+@Composable
 private fun <T> ChoiceRow(
     options: List<T>,
     selected: T?,
     label: @Composable (T) -> String,
     onSelect: (T?) -> Unit,
+    enabled: (T) -> Boolean = { true },
+    trailing: @Composable () -> Unit = {},
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { option ->
@@ -367,6 +381,7 @@ private fun <T> ChoiceRow(
             FilterChip(
                 selected = isSelected,
                 onClick = { onSelect(if (isSelected) null else option) },
+                enabled = enabled(option),
                 label = { Text(label(option)) },
                 leadingIcon = if (isSelected) {
                     { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
@@ -375,6 +390,7 @@ private fun <T> ChoiceRow(
                 },
             )
         }
+        trailing()
     }
 }
 
@@ -382,16 +398,23 @@ private fun <T> ChoiceRow(
 private fun WhenField(
     form: CreatePodForm,
     today: LocalDate,
+    startSlots: List<LocalTime>,
     error: String?,
     onFormChange: (CreatePodForm) -> Unit,
 ) {
-    var editing by rememberSaveable { mutableStateOf<TimeField?>(null) }
-    val minutes = Duration.between(form.startTime, form.endTime).toMinutes()
-    val summary = if (minutes > 0) {
-        stringResource(R.string.create_when_summary, dayLabel(form.day, today), durationText(minutes))
+    var pickingTime by rememberSaveable { mutableStateOf(false) }
+    val summary = if (form.length > Duration.ZERO) {
+        stringResource(
+            R.string.create_when_range,
+            dayLabel(form.day, today),
+            shortTime.format(form.startTime),
+            shortTime.format(form.endTime),
+        )
     } else {
         null
     }
+    // A start time that isn't one of the quick slots shows on the last chip instead.
+    val otherTime = form.startTime !in startSlots
 
     FieldGroup(label = stringResource(R.string.create_when), hint = summary, error = error) {
         ChoiceRow(
@@ -400,50 +423,51 @@ private fun WhenField(
             label = { dayLabel(it, today) },
             onSelect = { day -> day?.let { onFormChange(form.copy(day = it)) } },
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { editing = TimeField.START },
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.create_starts, shortTime.format(form.startTime)))
-            }
-            OutlinedButton(
-                onClick = { editing = TimeField.END },
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-            ) {
-                Text(stringResource(R.string.create_ends, shortTime.format(form.endTime)))
-            }
+        FieldLabel(stringResource(R.string.create_starts))
+        ChoiceRow(
+            options = startSlots,
+            selected = form.startTime,
+            label = { shortTime.format(it) },
+            onSelect = { time -> time?.let { onFormChange(form.withStartTime(it)) } },
+        ) {
+            FilterChip(
+                selected = otherTime,
+                onClick = { pickingTime = true },
+                label = {
+                    Text(if (otherTime) shortTime.format(form.startTime) else stringResource(R.string.create_other_time))
+                },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_clock),
+                        // Read out with the chip's time, so it's clear this chip isn't a quick slot.
+                        contentDescription = if (otherTime) stringResource(R.string.create_other_time) else null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
+            )
         }
+        FieldLabel(stringResource(R.string.create_length))
+        ChoiceRow(
+            options = LENGTH_CHOICES,
+            selected = form.length,
+            label = { durationText(it.toMinutes()) },
+            enabled = { form.canLast(it) },
+            onSelect = { length -> length?.let { onFormChange(form.withLength(it)) } },
+        )
     }
 
-    when (editing) {
-        TimeField.START -> TimeDialog(
+    if (pickingTime) {
+        TimeDialog(
             title = stringResource(R.string.create_start_time),
             initial = form.startTime,
             onConfirm = {
                 onFormChange(form.withStartTime(it))
-                editing = null
+                pickingTime = false
             },
-            onDismiss = { editing = null },
+            onDismiss = { pickingTime = false },
         )
-        TimeField.END -> TimeDialog(
-            title = stringResource(R.string.create_end_time),
-            initial = form.endTime,
-            onConfirm = {
-                onFormChange(form.copy(endTime = it))
-                editing = null
-            },
-            onDismiss = { editing = null },
-        )
-        null -> Unit
     }
 }
-
-private enum class TimeField { START, END }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -534,6 +558,7 @@ private fun CreatePodContentPreview() {
                         endTime = LocalTime.of(16, 30),
                     ),
                     today = previewToday,
+                    startSlots = listOf(LocalTime.of(15, 0), LocalTime.of(15, 30), LocalTime.of(16, 0), LocalTime.of(16, 30)),
                     errors = FormErrors(meetingPoint = FormError.MEETING_POINT_TOO_SHORT),
                 ),
                 onFormChange = {},

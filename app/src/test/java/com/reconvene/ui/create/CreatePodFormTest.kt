@@ -3,9 +3,11 @@ package com.reconvene.ui.create
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -72,6 +74,48 @@ class CreatePodFormTest {
         assertEquals(FormError.TOO_SHORT, timeError(LocalTime.of(15, 0), LocalTime.of(15, 20)))
         assertEquals(FormError.TOO_LONG, timeError(LocalTime.of(15, 0), LocalTime.of(19, 30)))
         assertNull(timeError(LocalTime.of(13, 30), LocalTime.of(15, 0)))
+    }
+
+    @Test
+    fun startSlotsTodayAreTheNextHalfHours() {
+        assertEquals(
+            listOf(LocalTime.of(14, 30), LocalTime.of(15, 0), LocalTime.of(15, 30), LocalTime.of(16, 0)),
+            startSlots(today, at(14, 0)),
+        )
+        assertEquals(LocalTime.of(15, 0), startSlots(today, at(14, 20)).first())
+    }
+
+    @Test
+    fun startSlotsStopAtMidnight() {
+        assertEquals(listOf(LocalTime.of(23, 0), LocalTime.of(23, 30)), startSlots(today, at(22, 40)))
+        assertTrue(startSlots(today, at(23, 50)).isEmpty())
+    }
+
+    @Test
+    fun startSlotsOnALaterDayAreRoundTimes() {
+        assertEquals(
+            listOf(LocalTime.of(10, 0), LocalTime.of(13, 0), LocalTime.of(16, 0), LocalTime.of(19, 0)),
+            startSlots(today.plusDays(1), at(14, 0)),
+        )
+    }
+
+    @Test
+    fun lengthSetsTheEndAndMustEndBeforeMidnight() {
+        val twoHours = validForm.withLength(Duration.ofHours(2))
+        assertEquals(LocalTime.of(17, 0), twoHours.endTime)
+        assertEquals(Duration.ofHours(2), twoHours.length)
+
+        val late = validForm.withStartTime(LocalTime.of(21, 0))
+        assertTrue(late.canLast(Duration.ofHours(2)))
+        assertFalse(late.canLast(Duration.ofHours(3)))
+    }
+
+    @Test
+    fun everyLengthChoiceIsAllowed() {
+        val now = at(9, 0).toInstant()
+        LENGTH_CHOICES.forEach { length ->
+            assertNull(length.toString(), validForm.withLength(length).validate(now, zone).time)
+        }
     }
 
     @Test

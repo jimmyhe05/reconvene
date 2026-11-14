@@ -25,8 +25,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.Clock
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @RunWith(AndroidJUnit4::class)
 class CreatePodScreenTest {
@@ -86,6 +89,29 @@ class CreatePodScreenTest {
         val pod = repository.created.single()
         assertEquals("GSU", pod.building)
         assertEquals("Food court tables", pod.meetingPoint)
+    }
+
+    @Test
+    fun pickingAStartSlotAndALengthSetsThePodTimes() {
+        composeRule.setContent {
+            ReconveneTheme {
+                CreatePodScreen(onBack = {}, onCreated = { created = true }, viewModel = viewModel)
+            }
+        }
+        val threeOClock = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(LocalTime.of(15, 0))
+
+        composeRule.onNodeWithText(string(R.string.create_topic)).performScrollTo().performTextInput("Operating systems lab")
+        composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
+        composeRule.onNodeWithText("CDS").performClick()
+        composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("Lobby")
+        composeRule.onNodeWithText(threeOClock).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.duration_hours, 2)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) { created }
+        val pod = repository.created.single()
+        assertEquals(ZonedDateTime.of(2026, 11, 10, 15, 0, 0, 0, zone).toInstant(), pod.startsAt)
+        assertEquals(ZonedDateTime.of(2026, 11, 10, 17, 0, 0, 0, zone).toInstant(), pod.endsAt)
     }
 
     @Test

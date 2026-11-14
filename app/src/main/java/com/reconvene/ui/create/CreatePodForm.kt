@@ -77,6 +77,14 @@ data class CreatePodForm(
         )
     }
 
+    val length: Duration
+        get() = Duration.between(startTime, endTime)
+
+    // A pod can't run past midnight, so a length only fits if it ends later on the same day.
+    fun canLast(length: Duration): Boolean = startTime.plus(length) > startTime
+
+    fun withLength(length: Duration): CreatePodForm = copy(endTime = startTime.plus(length))
+
     fun startsAt(zone: ZoneId): Instant = day.atTime(startTime).atZone(zone).toInstant()
 
     fun endsAt(zone: ZoneId): Instant = day.atTime(endTime).atZone(zone).toInstant()
@@ -88,8 +96,8 @@ data class CreatePodForm(
     // start. A pod can't run past midnight, so the end stops at 23:59 and validation flags it if
     // that's too short. If the current times are out of order, the length resets to the default.
     fun withStartTime(start: LocalTime): CreatePodForm {
-        val length = Duration.between(startTime, endTime).takeIf { it > Duration.ZERO } ?: DEFAULT_DURATION
-        val end = start.plus(length)
+        val kept = length.takeIf { it > Duration.ZERO } ?: DEFAULT_DURATION
+        val end = start.plus(kept)
         return copy(startTime = start, endTime = if (end > start) end else LAST_END_TIME)
     }
 }
@@ -97,11 +105,32 @@ data class CreatePodForm(
 val DEFAULT_DURATION: Duration = Duration.ofMinutes(90)
 private val LAST_END_TIME: LocalTime = LocalTime.of(23, 59)
 
-// Next half hour at least 15 minutes away, for 90 minutes; tomorrow morning if that runs past midnight.
-fun newPodForm(now: ZonedDateTime): CreatePodForm {
+// The lengths offered as chips, covering MIN_DURATION to MAX_DURATION.
+val LENGTH_CHOICES: List<Duration> = listOf(30L, 60L, 90L, 120L, 180L, 240L).map { Duration.ofMinutes(it) }
+
+private const val START_SLOT_COUNT = 4
+private val LATER_DAY_SLOTS = listOf(LocalTime.of(10, 0), LocalTime.of(13, 0), LocalTime.of(16, 0), LocalTime.of(19, 0))
+
+// The next half hour that is at least 15 minutes away.
+private fun nextHalfHour(now: ZonedDateTime): ZonedDateTime {
     val earliest = now.plusMinutes(15)
     val hour = earliest.truncatedTo(ChronoUnit.HOURS)
-    val start = listOf(0L, 30L, 60L).map { hour.plusMinutes(it) }.first { it >= earliest }
+    return listOf(0L, 30L, 60L).map { hour.plusMinutes(it) }.first { it >= earliest }
+}
+
+// Quick start times for a day: the next few half hours today, or round times across a later day.
+// Late at night today there may be fewer than four, or none.
+fun startSlots(day: LocalDate, now: ZonedDateTime): List<LocalTime> {
+    if (day != now.toLocalDate()) return LATER_DAY_SLOTS
+    val first = nextHalfHour(now)
+    return List(START_SLOT_COUNT) { first.plusMinutes(30L * it) }
+        .filter { it.toLocalDate() == day }
+        .map { it.toLocalTime() }
+}
+
+// Next half hour at least 15 minutes away, for 90 minutes; tomorrow morning if that runs past midnight.
+fun newPodForm(now: ZonedDateTime): CreatePodForm {
+    val start = nextHalfHour(now)
     val end = start.plus(DEFAULT_DURATION)
     return if (end.toLocalDate() == now.toLocalDate()) {
         CreatePodForm(day = now.toLocalDate(), startTime = start.toLocalTime(), endTime = end.toLocalTime())

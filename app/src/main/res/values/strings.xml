@@ -84,11 +84,11 @@
     <string name="create_meeting_point_hint">A public, specific spot. Never a private address.</string>
     <string name="create_meeting_point_suggestions">Common spots here. Tap one, then edit it if you like.</string>
     <string name="create_when">When</string>
-    <string name="create_starts">Starts %1$s</string>
-    <string name="create_ends">Ends %1$s</string>
+    <string name="create_starts">Starts</string>
+    <string name="create_other_time">Other time</string>
     <string name="create_start_time">Start time</string>
-    <string name="create_end_time">End time</string>
-    <string name="create_when_summary">%1$s, %2$s</string>
+    <string name="create_length">How long</string>
+    <string name="create_when_range">%1$s, %2$s to %3$s</string>
     <string name="create_group_size">Group size</string>
     <string name="create_group_size_hint">Including you. %1$d to %2$d people.</string>
     <plurals name="create_people">
