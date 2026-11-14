@@ -36,6 +36,18 @@ val suggestedBuildings = listOf(
     "Kilachand Center",
 )
 
+// Common public spots in each suggested building, offered as one-tap meeting points.
+val suggestedMeetingPoints: Map<String, List<String>> = mapOf(
+    "Mugar Library" to listOf("1st floor, near the entrance", "2nd floor study tables", "3rd floor quiet study"),
+    "CDS" to listOf("Ground floor, by the café", "2nd floor, by the big stairs", "3rd floor commons, near the windows"),
+    "GSU" to listOf("Food court tables", "2nd floor lounge", "By the Starbucks"),
+    "Questrom" to listOf("1st floor atrium", "By the Starbucks", "Pardee Library, 2nd floor"),
+    "Photonics Center" to listOf("1st floor lobby", "2nd floor atrium tables"),
+    "Science & Engineering Library" to listOf("1st floor group tables", "2nd floor quiet area"),
+    "CAS" to listOf("Main lobby, Comm Ave entrance", "Basement study tables"),
+    "Kilachand Center" to listOf("Ground floor lobby", "Lower level study area"),
+)
+
 data class CreatePodForm(
     val title: String = "",
     val course: String = "",
@@ -50,6 +62,21 @@ data class CreatePodForm(
     val capacity: Int = 4,
     val mode: PodMode = PodMode.QUIET,
 ) : Serializable {
+    val meetingPointSuggestions: List<String>
+        get() = if (customBuilding) emptyList() else suggestedMeetingPoints[building].orEmpty()
+
+    // Switching building drops a meeting point that was one of the old building's suggestions,
+    // since it names a spot somewhere else. Text the user typed is kept.
+    fun withBuilding(building: String, custom: Boolean = false): CreatePodForm {
+        if (building == this.building && custom == customBuilding) return this
+        val wasSuggested = meetingPoint in meetingPointSuggestions
+        return copy(
+            building = building,
+            customBuilding = custom,
+            meetingPoint = if (wasSuggested) "" else meetingPoint,
+        )
+    }
+
     fun startsAt(zone: ZoneId): Instant = day.atTime(startTime).atZone(zone).toInstant()
 
     fun endsAt(zone: ZoneId): Instant = day.atTime(endTime).atZone(zone).toInstant()

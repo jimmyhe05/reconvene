@@ -137,6 +137,32 @@ class CreatePodFormTest {
     }
 
     @Test
+    fun suggestedMeetingPointsBelongToSuggestedBuildingsAndFitTheLimits() {
+        assertEquals(suggestedBuildings.toSet(), suggestedMeetingPoints.keys)
+        suggestedMeetingPoints.values.flatten().forEach { spot ->
+            assertTrue(spot, spot.length in MEETING_POINT_MIN..MEETING_POINT_MAX)
+        }
+    }
+
+    @Test
+    fun onlySuggestedBuildingsOfferMeetingPoints() {
+        assertEquals(suggestedMeetingPoints["CDS"], validForm.withBuilding("CDS").meetingPointSuggestions)
+        assertTrue(validForm.withBuilding("CDS", custom = true).meetingPointSuggestions.isEmpty())
+        assertTrue(validForm.copy(building = null).meetingPointSuggestions.isEmpty())
+    }
+
+    @Test
+    fun changingBuildingDropsASuggestedMeetingPointButKeepsTypedText() {
+        val suggested = validForm.withBuilding("GSU").copy(meetingPoint = "Food court tables")
+        assertEquals("", suggested.withBuilding("CDS").meetingPoint)
+        assertEquals("", suggested.withBuilding("", custom = true).meetingPoint)
+        assertEquals("Food court tables", suggested.withBuilding("GSU").meetingPoint)
+
+        val typed = validForm.withBuilding("GSU").copy(meetingPoint = "Back corner booth")
+        assertEquals("Back corner booth", typed.withBuilding("CDS").meetingPoint)
+    }
+
+    @Test
     fun pastedLineBreaksBecomeSpaces() {
         val pasted = validForm.copy(
             title = "Android Dev\n\n// rules comment",

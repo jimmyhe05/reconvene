@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -141,15 +142,7 @@ fun CreatePodContent(
                 capitalization = KeyboardCapitalization.Characters,
             )
             BuildingField(form = form, hasError = errors.building != null, onFormChange = onFormChange)
-            FormTextField(
-                value = form.meetingPoint,
-                onValueChange = { onFormChange(form.copy(meetingPoint = it)) },
-                label = stringResource(R.string.create_meeting_point),
-                placeholder = stringResource(R.string.create_meeting_point_placeholder),
-                hint = stringResource(R.string.create_meeting_point_hint),
-                maxLength = MEETING_POINT_MAX,
-                error = errors.meetingPoint?.message(),
-            )
+            MeetingPointField(form = form, error = errors.meetingPoint?.message(), onFormChange = onFormChange)
             WhenField(form = form, today = uiState.today, error = errors.time?.message(), onFormChange = onFormChange)
             FieldGroup(
                 label = stringResource(R.string.create_group_size),
@@ -264,7 +257,7 @@ private fun BuildingField(
                     DropdownMenuItem(
                         text = { Text(building) },
                         onClick = {
-                            onFormChange(form.copy(building = building, customBuilding = false))
+                            onFormChange(form.withBuilding(building))
                             expanded = false
                         },
                     )
@@ -274,7 +267,7 @@ private fun BuildingField(
                     text = { Text(other) },
                     onClick = {
                         // Choosing it again keeps a name that's already typed.
-                        if (!form.customBuilding) onFormChange(form.copy(building = "", customBuilding = true))
+                        if (!form.customBuilding) onFormChange(form.withBuilding("", custom = true))
                         expanded = false
                     },
                 )
@@ -290,6 +283,42 @@ private fun BuildingField(
                 error = if (hasError) stringResource(R.string.error_building_name_missing) else null,
                 capitalization = KeyboardCapitalization.Words,
             )
+        }
+    }
+}
+
+// The meeting point text field, with the chosen building's common spots as one-tap chips under it.
+@Composable
+private fun MeetingPointField(
+    form: CreatePodForm,
+    error: String?,
+    onFormChange: (CreatePodForm) -> Unit,
+) {
+    val suggestions = form.meetingPointSuggestions
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FormTextField(
+            value = form.meetingPoint,
+            onValueChange = { onFormChange(form.copy(meetingPoint = it)) },
+            label = stringResource(R.string.create_meeting_point),
+            placeholder = stringResource(R.string.create_meeting_point_placeholder),
+            hint = stringResource(R.string.create_meeting_point_hint),
+            maxLength = MEETING_POINT_MAX,
+            error = error,
+        )
+        if (suggestions.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.create_meeting_point_suggestions),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                suggestions.forEach { spot ->
+                    SuggestionChip(
+                        onClick = { onFormChange(form.copy(meetingPoint = spot)) },
+                        label = { Text(spot) },
+                    )
+                }
+            }
         }
     }
 }

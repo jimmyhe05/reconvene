@@ -69,6 +69,26 @@ class CreatePodScreenTest {
     }
 
     @Test
+    fun tappingASuggestedSpotFillsTheMeetingPoint() {
+        composeRule.setContent {
+            ReconveneTheme {
+                CreatePodScreen(onBack = {}, onCreated = { created = true }, viewModel = viewModel)
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.create_topic)).performScrollTo().performTextInput("Data structures review")
+        composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
+        composeRule.onNodeWithText("GSU").performClick()
+        composeRule.onNodeWithText("Food court tables").performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) { created }
+        val pod = repository.created.single()
+        assertEquals("GSU", pod.building)
+        assertEquals("Food court tables", pod.meetingPoint)
+    }
+
+    @Test
     fun otherBuildingTakesATypedName() {
         composeRule.setContent {
             ReconveneTheme {
