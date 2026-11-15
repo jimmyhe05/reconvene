@@ -9,6 +9,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
@@ -139,7 +140,20 @@ fun newPodForm(now: ZonedDateTime): CreatePodForm {
     }
 }
 
-fun dayChoices(today: LocalDate): List<LocalDate> = List(START_WINDOW_DAYS) { today.plusDays(it.toLong()) }
+// The days offered as chips. Any other day in the start window comes from the calendar.
+fun quickDays(today: LocalDate): List<LocalDate> = listOf(today, today.plusDays(1))
+
+// Firestore rules reject a start more than START_WINDOW_DAYS away, counted from the current time.
+// Stopping a day short of that keeps every time of day on the last day inside the window.
+fun lastStartDay(today: LocalDate): LocalDate = today.plusDays(START_WINDOW_DAYS - 1L)
+
+fun canStartOn(day: LocalDate, today: LocalDate): Boolean = day in today..lastStartDay(today)
+
+// Material's date picker counts a day as the milliseconds at its midnight in UTC, whatever the
+// device's time zone is. Converting through the local zone instead can land on the day before.
+fun LocalDate.toPickerMillis(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+fun pickerMillisToDate(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
 
 enum class FormError {
     TOPIC_TOO_SHORT,

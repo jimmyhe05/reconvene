@@ -3,6 +3,8 @@ package com.reconvene.ui.create
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -25,6 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.Clock
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -112,6 +115,34 @@ class CreatePodScreenTest {
         val pod = repository.created.single()
         assertEquals(ZonedDateTime.of(2026, 11, 10, 15, 0, 0, 0, zone).toInstant(), pod.startsAt)
         assertEquals(ZonedDateTime.of(2026, 11, 10, 17, 0, 0, 0, zone).toInstant(), pod.endsAt)
+    }
+
+    @Test
+    fun pickingADateFromTheCalendarSetsThePodDay() {
+        composeRule.setContent {
+            ReconveneTheme {
+                CreatePodScreen(onBack = {}, onCreated = { created = true }, viewModel = viewModel)
+            }
+        }
+        val friday = LocalDate.of(2026, 11, 13)
+        // How the calendar names each of its day cells.
+        val calendarDay = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy").format(friday)
+
+        composeRule.onNodeWithText(string(R.string.create_topic)).performScrollTo().performTextInput("Networks problem set")
+        composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
+        composeRule.onNodeWithText("CDS").performClick()
+        composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("Lobby")
+        composeRule.onNodeWithText(string(R.string.create_pick_date)).performScrollTo().performClick()
+        composeRule.onNode(hasText(calendarDay, substring = true) or hasContentDescription(calendarDay, substring = true))
+            .performClick()
+        composeRule.onNodeWithText(string(R.string.action_ok)).performClick()
+        composeRule.onNodeWithText(DateTimeFormatter.ofPattern("EEE, MMM d").format(friday)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) { created }
+        val pod = repository.created.single()
+        assertEquals(ZonedDateTime.of(2026, 11, 13, 14, 30, 0, 0, zone).toInstant(), pod.startsAt)
+        assertEquals(ZonedDateTime.of(2026, 11, 13, 16, 0, 0, 0, zone).toInstant(), pod.endsAt)
     }
 
     @Test

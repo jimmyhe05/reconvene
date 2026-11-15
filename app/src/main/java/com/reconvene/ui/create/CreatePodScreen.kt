@@ -1,5 +1,6 @@
 package com.reconvene.ui.create
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -27,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -402,7 +407,9 @@ private fun WhenField(
     error: String?,
     onFormChange: (CreatePodForm) -> Unit,
 ) {
+    var pickingDate by rememberSaveable { mutableStateOf(false) }
     var pickingTime by rememberSaveable { mutableStateOf(false) }
+    val quickDays = quickDays(today)
     val summary = if (form.length > Duration.ZERO) {
         stringResource(
             R.string.create_when_range,
@@ -413,16 +420,24 @@ private fun WhenField(
     } else {
         null
     }
-    // A start time that isn't one of the quick slots shows on the last chip instead.
-    val otherTime = form.startTime !in startSlots
+    // A day or start time that isn't one of the quick chips shows on the row's last chip instead.
+    val otherDay = if (form.day in quickDays) null else dayLabel(form.day, today)
+    val otherTime = if (form.startTime in startSlots) null else shortTime.format(form.startTime)
 
     FieldGroup(label = stringResource(R.string.create_when), hint = summary, error = error) {
         ChoiceRow(
-            options = dayChoices(today),
+            options = quickDays,
             selected = form.day,
             label = { dayLabel(it, today) },
             onSelect = { day -> day?.let { onFormChange(form.copy(day = it)) } },
-        )
+        ) {
+            PickerChip(
+                picked = otherDay,
+                label = stringResource(R.string.create_pick_date),
+                icon = R.drawable.ic_calendar,
+                onClick = { pickingDate = true },
+            )
+        }
         FieldLabel(stringResource(R.string.create_starts))
         ChoiceRow(
             options = startSlots,
@@ -430,20 +445,11 @@ private fun WhenField(
             label = { shortTime.format(it) },
             onSelect = { time -> time?.let { onFormChange(form.withStartTime(it)) } },
         ) {
-            FilterChip(
-                selected = otherTime,
+            PickerChip(
+                picked = otherTime,
+                label = stringResource(R.string.create_other_time),
+                icon = R.drawable.ic_clock,
                 onClick = { pickingTime = true },
-                label = {
-                    Text(if (otherTime) shortTime.format(form.startTime) else stringResource(R.string.create_other_time))
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_clock),
-                        // Read out with the chip's time, so it's clear this chip isn't a quick slot.
-                        contentDescription = if (otherTime) stringResource(R.string.create_other_time) else null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
             )
         }
         FieldLabel(stringResource(R.string.create_length))
@@ -456,6 +462,17 @@ private fun WhenField(
         )
     }
 
+    if (pickingDate) {
+        DateDialog(
+            initial = form.day,
+            today = today,
+            onConfirm = {
+                onFormChange(form.copy(day = it))
+                pickingDate = false
+            },
+            onDismiss = { pickingDate = false },
+        )
+    }
     if (pickingTime) {
         TimeDialog(
             title = stringResource(R.string.create_start_time),
@@ -466,6 +483,66 @@ private fun WhenField(
             },
             onDismiss = { pickingTime = false },
         )
+    }
+}
+
+// The last chip in a row, which opens a picker. Once something is picked there, the chip shows it.
+@Composable
+private fun PickerChip(
+    picked: String?,
+    label: String,
+    @DrawableRes icon: Int,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = picked != null,
+        onClick = onClick,
+        label = { Text(picked ?: label) },
+        leadingIcon = {
+            Icon(
+                painter = painterResource(icon),
+                // Read out with the picked value, so it's still clear what the chip opens.
+                contentDescription = if (picked != null) label else null,
+                modifier = Modifier.size(18.dp),
+            )
+        },
+    )
+}
+
+// A calendar where only the days a pod can start on are enabled.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateDialog(
+    initial: LocalDate,
+    today: LocalDate,
+    onConfirm: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val years = today.year..lastStartDay(today).year
+    val state = rememberDatePickerState(
+        // A saved form can hold a day that has passed, which the calendar can't open on.
+        initialSelectedDateMillis = (if (canStartOn(initial, today)) initial else today).toPickerMillis(),
+        yearRange = years,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long) = canStartOn(pickerMillisToDate(utcTimeMillis), today)
+
+            override fun isSelectableYear(year: Int) = year in years
+        },
+    )
+    // Null while the typed-date mode holds a date that isn't allowed.
+    val picked = state.selectedDateMillis
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { picked?.let { onConfirm(pickerMillisToDate(it)) } }, enabled = picked != null) {
+                Text(stringResource(R.string.action_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    ) {
+        DatePicker(state = state)
     }
 }
 

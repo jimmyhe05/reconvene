@@ -8,6 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -97,6 +98,35 @@ class CreatePodFormTest {
             listOf(LocalTime.of(10, 0), LocalTime.of(13, 0), LocalTime.of(16, 0), LocalTime.of(19, 0)),
             startSlots(today.plusDays(1), at(14, 0)),
         )
+    }
+
+    @Test
+    fun quickDaysAreTodayAndTomorrow() {
+        assertEquals(listOf(today, today.plusDays(1)), quickDays(today))
+    }
+
+    @Test
+    fun aPodCanStartFromTodayToTheEndOfTheWindow() {
+        assertFalse(canStartOn(today.minusDays(1), today))
+        assertTrue(canStartOn(today, today))
+        assertTrue(canStartOn(lastStartDay(today), today))
+        assertFalse(canStartOn(lastStartDay(today).plusDays(1), today))
+    }
+
+    @Test
+    fun theLastDayFitsTheServersWindowAtAnyTimeOfDay() {
+        val justAfterMidnight = at(0, 0)
+        val latestStart = ZonedDateTime.of(lastStartDay(today), LocalTime.of(23, 59), zone)
+
+        assertTrue(latestStart <= justAfterMidnight.plusDays(START_WINDOW_DAYS.toLong()))
+    }
+
+    @Test
+    fun pickerMillisAreMidnightUtcAndConvertBackToTheSameDay() {
+        val day = LocalDate.of(2026, 11, 13)
+
+        assertEquals(Instant.parse("2026-11-13T00:00:00Z").toEpochMilli(), day.toPickerMillis())
+        assertEquals(day, pickerMillisToDate(day.toPickerMillis()))
     }
 
     @Test
