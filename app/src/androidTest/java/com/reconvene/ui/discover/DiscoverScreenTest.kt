@@ -22,6 +22,7 @@ import com.reconvene.data.repository.PodRepository
 import com.reconvene.ui.theme.ReconveneTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -41,6 +42,7 @@ class DiscoverScreenTest {
     private val zone = ZoneId.of("America/New_York")
     private val now = ZonedDateTime.of(2026, 11, 16, 14, 0, 0, 0, zone).toInstant()
     private val context = ApplicationProvider.getApplicationContext<Context>()
+    private var openedPodId: String? = null
 
     private fun pod(id: String, title: String, startsAt: Instant, full: Boolean = false) = Pod(
         id = id,
@@ -67,7 +69,7 @@ class DiscoverScreenTest {
         val viewModel = DiscoverViewModel(StaticPodRepository(pods), UnavailableAuthRepository, Clock.fixed(now, zone))
         composeRule.setContent {
             ReconveneTheme {
-                DiscoverScreen(onCreatePod = {}, onSignIn = {}, viewModel = viewModel)
+                DiscoverScreen(onCreatePod = {}, onSignIn = {}, onOpenPod = { openedPodId = it }, viewModel = viewModel)
             }
         }
     }
@@ -100,6 +102,13 @@ class DiscoverScreenTest {
         composeRule.onNodeWithText(context.getString(R.string.discover_filter_open_spots)).performClick()
         list.performScrollToNode(hasText("Calculus review"))
         composeRule.onNodeWithText("Calculus review").assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingACardOpensThatPod() {
+        composeRule.onNodeWithText("Organic chemistry").performClick()
+
+        assertEquals("chem", openedPodId)
     }
 
     @Test

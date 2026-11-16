@@ -3,6 +3,7 @@ package com.reconvene.ui.discover
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -37,6 +39,7 @@ import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Instant
 
 // viewerUid is null when nobody can join (no signed-in user), which hides the Join and Leave buttons.
+// With onOpen, tapping anywhere outside those buttons opens the pod.
 @Composable
 fun PodCard(
     pod: Pod,
@@ -47,8 +50,17 @@ fun PodCard(
     onJoin: () -> Unit = {},
     onLeave: () -> Unit = {},
     onCancel: () -> Unit = {},
+    onOpen: (() -> Unit)? = null,
 ) {
-    PodCardSurface(modifier.semantics(mergeDescendants = true) {}) {
+    val openLabel = stringResource(R.string.pod_detail_open)
+    val opens = if (onOpen != null) {
+        Modifier
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClickLabel = openLabel, onClick = onOpen)
+    } else {
+        Modifier
+    }
+    PodCardSurface(modifier.then(opens).semantics(mergeDescendants = true) {}) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             pod.course?.let { Tag(it) }
             Spacer(Modifier.weight(1f))
@@ -101,7 +113,7 @@ private fun PodCardSurface(modifier: Modifier, content: @Composable ColumnScope.
 }
 
 @Composable
-private fun PodBadges(pod: Pod, now: Instant) {
+fun PodBadges(pod: Pod, now: Instant) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         if (pod.timing(now) == PodTiming.ONGOING) {
             StatusBadge(BadgeKind.LIVE, stringResource(R.string.badge_ongoing))

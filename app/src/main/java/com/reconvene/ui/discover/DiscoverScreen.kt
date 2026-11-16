@@ -70,6 +70,7 @@ import java.time.ZoneId
 fun DiscoverScreen(
     onCreatePod: () -> Unit,
     onSignIn: () -> Unit,
+    onOpenPod: (podId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(factory = DiscoverViewModel.Factory),
 ) {
@@ -86,6 +87,7 @@ fun DiscoverScreen(
             onRetry = viewModel::retry,
             onCreatePod = onCreatePod,
             onSignIn = onSignIn,
+            onOpenPod = onOpenPod,
             onJoin = viewModel::join,
             onLeave = viewModel::leave,
             onCancel = viewModel::cancel,
@@ -103,6 +105,7 @@ data class PodListActions(
     val onRetry: () -> Unit = {},
     val onCreatePod: () -> Unit = {},
     val onSignIn: () -> Unit = {},
+    val onOpenPod: (podId: String) -> Unit = {},
     val onJoin: (podId: String) -> Unit = {},
     val onLeave: (podId: String) -> Unit = {},
     val onCancel: (podId: String) -> Unit = {},
@@ -254,6 +257,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
                             onJoin = { actions.onJoin(pod.id) },
                             onLeave = { actions.onLeave(pod.id) },
                             onCancel = { actions.onCancel(pod.id) },
+                            onOpen = { actions.onOpenPod(pod.id) },
                         )
                     }
                 }
