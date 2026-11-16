@@ -18,6 +18,7 @@ class OfflineFirstPodRepository(
     private val clock: Clock,
 ) : PodRepository {
 
+    // Read only Room, change it to Pods
     override fun observePods(): Flow<List<Pod>> =
         podDao.observeAll().map { pods -> pods.map { it.toPod() } }
 
@@ -25,7 +26,6 @@ class OfflineFirstPodRepository(
         podDao.upsertAll(remote.fetchPods().map { it.toEntity() })
     }
 
-    // Room first, so the pod shows up at once and survives a restart even if the remote is unreachable.
     override suspend fun createPod(pod: Pod) {
         podDao.upsertAll(listOf(pod.toEntity()))
         remote.createPod(pod)
@@ -57,11 +57,10 @@ class OfflineFirstPodRepository(
     private suspend fun cachedPod(podId: String): Pod =
         podDao.getById(podId)?.toPod() ?: throw PodActionException(PodActionProblem.NOT_FOUND)
 
-    // Saves what the server answered, including its copy when it refused, so the card shows why.
     private suspend fun save(change: suspend () -> Pod) {
         val saved = try {
             change()
-        } catch (e: PodActionException) {
+        } catch (e: PodActionException) { // Room first, then ViewModel shows
             e.latest?.let { podDao.upsertAll(listOf(it.toEntity())) }
             throw e
         }

@@ -10,7 +10,7 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.reconvene.data.auth.BU_EMAIL_DOMAIN
 
-// Shows Google's account picker, limited to bu.edu accounts, and returns the ID token.
+// Google's account picker, limited to bu.edu accounts, and returns the ID token.
 // Needs an Activity context because the picker is a UI. Lives in the UI layer for that reason.
 suspend fun requestBuGoogleIdToken(context: Context, webClientId: String): String {
     val option = GetSignInWithGoogleOption.Builder(webClientId)

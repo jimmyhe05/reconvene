@@ -9,7 +9,6 @@ import java.util.Date
 
 const val PODS_COLLECTION = "pods"
 
-// Field names in a pod document. firebase/firestore.rules checks the same names.
 object PodFields {
     const val TITLE = "title"
     const val COURSE = "course"
@@ -21,7 +20,7 @@ object PodFields {
     const val HOST_UID = "hostUid"
     const val HOST_NAME = "hostName"
 
-    // A map from uid to display name, so joining and leaving each change one key that the rules can check.
+    // Uid to display name, so joining and leaving each change one key that the rules can check.
     const val MEMBERS = "members"
     const val MODE = "mode"
     const val CANCELED = "canceled"
@@ -43,8 +42,7 @@ fun Pod.toFirestore(): Map<String, Any?> = mapOf(
     PodFields.CANCELED to canceled,
 )
 
-// Returns null for a document that is missing a field or has the wrong type, so one bad
-// document is skipped instead of failing the whole refresh.
+// Returns null for a document that is missing a field or has the wrong type.
 fun podFromFirestore(id: String, data: Map<String, Any?>): Pod? {
     val mode = (data[PodFields.MODE] as? String)
         ?.let { name -> PodMode.entries.firstOrNull { it.name == name } }

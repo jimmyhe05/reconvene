@@ -79,8 +79,7 @@ class DiscoverViewModel(
         podRepository.leavePod(podId, user.uid)
     }
 
-    // The card asks the host to confirm first. The pod then drops out of the list, so the message
-    // confirms where it went.
+    // The card asks the host to confirm first. The pod then drops out of the list, so the message confirms where it went.
     fun cancel(podId: String) = changePod(podId) { user ->
         podRepository.cancelPod(podId, user.uid)
         _message.value = PodMessage.CANCELED
@@ -167,8 +166,7 @@ class DiscoverViewModel(
         PodActionProblem.FULL -> PodMessage.FULL
         PodActionProblem.CLOSED -> PodMessage.CLOSED
         PodActionProblem.NOT_FOUND -> PodMessage.GONE
-        // The card shows Leave only to members and Cancel only to the host, so these mean the
-        // cached pod is out of date.
+        // The card shows Leave only to members and Cancel only to the host, so these mean the cached pod is out of date.
         PodActionProblem.HOST_CANNOT_LEAVE, PodActionProblem.NOT_HOST -> PodMessage.FAILED
     }
 
