@@ -28,6 +28,8 @@ data class Pod(
     val members: List<PodMember>,
     val mode: PodMode,
     val canceled: Boolean = false,
+    // The group that scheduled this pod, or null for a pod someone made on Discover.
+    val groupId: String? = null,
 ) {
     val memberNames: List<String>
         get() = members.map { it.name }
