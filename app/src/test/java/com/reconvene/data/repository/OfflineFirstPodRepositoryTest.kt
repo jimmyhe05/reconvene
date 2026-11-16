@@ -8,6 +8,7 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodActionException
 import com.reconvene.data.model.PodActionProblem
 import com.reconvene.data.model.PodMember
+import com.reconvene.data.remote.FakePodRemoteDataSource
 import com.reconvene.data.remote.PodRemoteDataSource
 import com.reconvene.testing.TEST_HOST
 import com.reconvene.testing.testPod
@@ -70,6 +71,18 @@ class OfflineFirstPodRepositoryTest {
 
         assertTrue(result.exceptionOrNull() is IOException)
         assertEquals(listOf("cached"), repository.observePods().first().map { it.id })
+    }
+
+    // Opening a pod's details refreshes, so the sample data must not undo a join made on Discover.
+    @Test
+    fun sampleDataKeepsAJoinAcrossRefreshes() = runTest {
+        val repository = repository(FakePodRemoteDataSource(clock))
+        repository.refresh()
+
+        repository.joinPod("a1", terrier)
+        repository.refresh()
+
+        assertTrue(cachedPod("a1").hasMember(terrier.uid))
     }
 
     @Test
