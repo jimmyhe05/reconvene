@@ -176,7 +176,7 @@ fun CreatePodContent(
                     label = stringResource(R.string.create_group_size),
                     hint = stringResource(R.string.create_group_size_hint, CAPACITY_MIN, CAPACITY_MAX),
                 ) {
-                    CapacityStepper(capacity = form.capacity, onChange = { onFormChange(form.copy(capacity = it)) })
+                    CapacityPicker(capacity = form.capacity, onChange = { onFormChange(form.copy(capacity = it)) })
                 }
                 FieldGroup(label = stringResource(R.string.create_vibe), hint = stringResource(form.mode.hintRes)) {
                     ChoiceRow(
@@ -638,6 +638,22 @@ private fun TimeDialog(
         },
     ) {
         TimePicker(state = state)
+    }
+}
+
+// Common sizes as one tap, and a stepper for any exact size from CAPACITY_MIN to CAPACITY_MAX.
+// The stepper alone would take 48 taps to reach 50, and a slider is hard to stop on an exact number.
+@Composable
+private fun CapacityPicker(capacity: Int, onChange: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ChoiceRow(
+            options = CAPACITY_CHOICES,
+            selected = capacity,
+            label = { it.toString() },
+            // Tapping the chosen size again keeps it; there is always a size.
+            onSelect = { size -> size?.let(onChange) },
+        )
+        CapacityStepper(capacity = capacity, onChange = onChange)
     }
 }
 

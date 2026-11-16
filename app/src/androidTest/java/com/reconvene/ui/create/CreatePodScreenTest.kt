@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -185,6 +187,27 @@ class CreatePodScreenTest {
 
         composeRule.waitUntil(timeoutMillis = 5_000) { created }
         assertEquals("College of Fine Arts", repository.created.single().building)
+    }
+
+    @Test
+    fun sizeChipsAndTheStepperReachAnyGroupSizeUpTo50() {
+        composeRule.setContent {
+            ReconveneTheme {
+                CreatePodScreen(onBack = {}, onCreated = {}, viewModel = viewModel)
+            }
+        }
+        val resources = ApplicationProvider.getApplicationContext<Context>().resources
+        val more = string(R.string.create_more_people)
+
+        composeRule.onNodeWithText("50").performScrollTo().performClick()
+        composeRule.onNodeWithText(resources.getQuantityString(R.plurals.create_people, 50, 50))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(more).assertIsNotEnabled()
+
+        composeRule.onNodeWithText("20").performScrollTo().performClick()
+        composeRule.onNodeWithContentDescription(more).performScrollTo().performClick()
+        assertEquals(21, viewModel.uiState.value.form.capacity)
     }
 }
 
