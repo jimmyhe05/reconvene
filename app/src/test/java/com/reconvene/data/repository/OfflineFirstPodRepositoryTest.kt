@@ -47,6 +47,21 @@ class OfflineFirstPodRepositoryTest {
     }
 
     @Test
+    fun observedPodFollowsChangesAndIsNullWhenMissing() = runTest {
+        val repository = repository(TestPodRemoteDataSource { emptyList() })
+        val pod = testPod(id = "a1", startsAt = noon)
+
+        assertEquals(null, repository.observePod("a1").first())
+
+        podDao.upsertAll(listOf(pod.toEntity()))
+        assertEquals(pod, repository.observePod("a1").first())
+
+        podDao.upsertAll(listOf(pod.copy(canceled = true).toEntity()))
+        assertEquals(true, repository.observePod("a1").first()?.canceled)
+        assertEquals(null, repository.observePod("other").first())
+    }
+
+    @Test
     fun failedRefreshKeepsCachedPods() = runTest {
         podDao.upsertAll(listOf(testPod(id = "cached", startsAt = noon).toEntity()))
         val repository = repository(TestPodRemoteDataSource { throw IOException("Network unavailable") })
@@ -191,6 +206,8 @@ private class FakePodDao : PodDao {
         rows.map { pods -> pods.values.sortedBy { it.startsAt } }
 
     override suspend fun getById(id: String): PodEntity? = rows.value[id]
+
+    override fun observeById(id: String): Flow<PodEntity?> = rows.map { it[id] }
 
     override suspend fun upsertAll(pods: List<PodEntity>) {
         rows.update { current -> current + pods.associateBy { it.id } }

@@ -54,6 +54,14 @@ class PodDaoTest {
         assertEquals(listOf(listOf("Maya", "Jordan")), stored.map { it.memberNames })
     }
 
+    @Test
+    fun observeByIdFindsOnePodOrNull() = runTest {
+        podDao.upsertAll(listOf(pod(id = "a1"), pod(id = "b2")).map { it.toEntity() })
+
+        assertEquals(pod(id = "b2"), podDao.observeById("b2").first()?.toPod())
+        assertEquals(null, podDao.observeById("missing").first())
+    }
+
     private fun pod(
         id: String,
         startsAt: Instant = noon,
