@@ -54,6 +54,16 @@ class CreatePodViewModelTest {
     }
 
     @Test
+    fun startSlotsFollowTheFormsDay() {
+        assertEquals(LocalTime.of(14, 30), viewModel.uiState.value.startSlots.first())
+
+        val tomorrow = viewModel.uiState.value.form.day.plusDays(1)
+        viewModel.updateForm(viewModel.uiState.value.form.copy(day = tomorrow))
+
+        assertEquals(LocalTime.of(10, 0), viewModel.uiState.value.startSlots.first())
+    }
+
+    @Test
     fun errorsAppearOnlyAfterCreateAndClearAsFieldsAreFixed() {
         viewModel.updateForm(viewModel.uiState.value.form.copy(title = "A"))
         assertTrue(viewModel.uiState.value.errors.isEmpty)
@@ -115,6 +125,18 @@ class CreatePodViewModelTest {
         local.create()
 
         assertEquals("You", repository.created.single().hostName)
+    }
+
+    @Test
+    fun previewFollowsTheForm() {
+        assertEquals("", viewModel.uiState.value.preview.title)
+
+        fillIn()
+
+        val state = viewModel.uiState.value
+        assertEquals("Algorithms exam review", state.preview.title)
+        assertEquals("Mugar Library", state.preview.building)
+        assertEquals(clock.instant(), state.now)
     }
 
     @Test
