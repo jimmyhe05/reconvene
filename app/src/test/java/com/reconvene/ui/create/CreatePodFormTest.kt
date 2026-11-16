@@ -3,9 +3,12 @@ package com.reconvene.ui.create
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -75,6 +78,77 @@ class CreatePodFormTest {
     }
 
     @Test
+    fun startSlotsTodayAreTheNextHalfHours() {
+        assertEquals(
+            listOf(LocalTime.of(14, 30), LocalTime.of(15, 0), LocalTime.of(15, 30), LocalTime.of(16, 0)),
+            startSlots(today, at(14, 0)),
+        )
+        assertEquals(LocalTime.of(15, 0), startSlots(today, at(14, 20)).first())
+    }
+
+    @Test
+    fun startSlotsStopAtMidnight() {
+        assertEquals(listOf(LocalTime.of(23, 0), LocalTime.of(23, 30)), startSlots(today, at(22, 40)))
+        assertTrue(startSlots(today, at(23, 50)).isEmpty())
+    }
+
+    @Test
+    fun startSlotsOnALaterDayAreRoundTimes() {
+        assertEquals(
+            listOf(LocalTime.of(10, 0), LocalTime.of(13, 0), LocalTime.of(16, 0), LocalTime.of(19, 0)),
+            startSlots(today.plusDays(1), at(14, 0)),
+        )
+    }
+
+    @Test
+    fun quickDaysAreTodayAndTomorrow() {
+        assertEquals(listOf(today, today.plusDays(1)), quickDays(today))
+    }
+
+    @Test
+    fun aPodCanStartFromTodayToTheEndOfTheWindow() {
+        assertFalse(canStartOn(today.minusDays(1), today))
+        assertTrue(canStartOn(today, today))
+        assertTrue(canStartOn(lastStartDay(today), today))
+        assertFalse(canStartOn(lastStartDay(today).plusDays(1), today))
+    }
+
+    @Test
+    fun theLastDayFitsTheServersWindowAtAnyTimeOfDay() {
+        val justAfterMidnight = at(0, 0)
+        val latestStart = ZonedDateTime.of(lastStartDay(today), LocalTime.of(23, 59), zone)
+
+        assertTrue(latestStart <= justAfterMidnight.plusDays(START_WINDOW_DAYS.toLong()))
+    }
+
+    @Test
+    fun pickerMillisAreMidnightUtcAndConvertBackToTheSameDay() {
+        val day = LocalDate.of(2026, 11, 13)
+
+        assertEquals(Instant.parse("2026-11-13T00:00:00Z").toEpochMilli(), day.toPickerMillis())
+        assertEquals(day, pickerMillisToDate(day.toPickerMillis()))
+    }
+
+    @Test
+    fun lengthSetsTheEndAndMustEndBeforeMidnight() {
+        val twoHours = validForm.withLength(Duration.ofHours(2))
+        assertEquals(LocalTime.of(17, 0), twoHours.endTime)
+        assertEquals(Duration.ofHours(2), twoHours.length)
+
+        val late = validForm.withStartTime(LocalTime.of(21, 0))
+        assertTrue(late.canLast(Duration.ofHours(2)))
+        assertFalse(late.canLast(Duration.ofHours(3)))
+    }
+
+    @Test
+    fun everyLengthChoiceIsAllowed() {
+        val now = at(9, 0).toInstant()
+        LENGTH_CHOICES.forEach { length ->
+            assertNull(length.toString(), validForm.withLength(length).validate(now, zone).time)
+        }
+    }
+
+    @Test
     fun movingTheStartMovesTheEndAndKeepsTheLength() {
         val later = validForm.withStartTime(LocalTime.of(17, 0))
         assertEquals(LocalTime.of(17, 0) to LocalTime.of(18, 30), later.startTime to later.endTime)
@@ -115,6 +189,68 @@ class CreatePodFormTest {
         assertEquals(at(16, 30).toInstant(), pod.endsAt)
         assertEquals("terrier", pod.hostUid)
         assertEquals(listOf(host), pod.members)
+    }
+
+    @Test
+    fun previewPodWorksForABlankFormAndCountsTheHost() {
+        val blank = newPodForm(at(14, 0)).toPreviewPod(zone)
+
+        assertEquals("", blank.title)
+        assertEquals("", blank.building)
+        assertEquals(at(14, 30).toInstant(), blank.startsAt)
+        assertEquals(blank.capacity - 1, blank.spotsLeft)
+    }
+
+    @Test
+    fun previewPodMatchesThePodThatGetsCreated() {
+        val host = PodMember(uid = "preview", name = "")
+
+        assertEquals(validForm.toPod("preview", host, zone), validForm.toPreviewPod(zone))
+    }
+
+    @Test
+    fun customBuildingNeedsAName() {
+        val now = at(14, 0).toInstant()
+        val other = validForm.copy(building = "", customBuilding = true)
+
+        assertEquals(FormError.BUILDING_MISSING, other.validate(now, zone).building)
+        assertEquals(FormError.BUILDING_MISSING, other.copy(building = "   ").validate(now, zone).building)
+        assertNull(other.copy(building = "College of Fine Arts").validate(now, zone).building)
+    }
+
+    @Test
+    fun customBuildingIsTrimmedIntoThePod() {
+        val form = validForm.copy(building = "  College of\nFine Arts ", customBuilding = true)
+
+        val pod = form.toPod(id = "new", host = PodMember(uid = "terrier", name = "Terrier"), zone = zone)
+
+        assertEquals("College of Fine Arts", pod.building)
+    }
+
+    @Test
+    fun suggestedMeetingPointsBelongToSuggestedBuildingsAndFitTheLimits() {
+        assertEquals(suggestedBuildings.toSet(), suggestedMeetingPoints.keys)
+        suggestedMeetingPoints.values.flatten().forEach { spot ->
+            assertTrue(spot, spot.length in MEETING_POINT_MIN..MEETING_POINT_MAX)
+        }
+    }
+
+    @Test
+    fun onlySuggestedBuildingsOfferMeetingPoints() {
+        assertEquals(suggestedMeetingPoints["CDS"], validForm.withBuilding("CDS").meetingPointSuggestions)
+        assertTrue(validForm.withBuilding("CDS", custom = true).meetingPointSuggestions.isEmpty())
+        assertTrue(validForm.copy(building = null).meetingPointSuggestions.isEmpty())
+    }
+
+    @Test
+    fun changingBuildingDropsASuggestedMeetingPointButKeepsTypedText() {
+        val suggested = validForm.withBuilding("GSU").copy(meetingPoint = "Food court tables")
+        assertEquals("", suggested.withBuilding("CDS").meetingPoint)
+        assertEquals("", suggested.withBuilding("", custom = true).meetingPoint)
+        assertEquals("Food court tables", suggested.withBuilding("GSU").meetingPoint)
+
+        val typed = validForm.withBuilding("GSU").copy(meetingPoint = "Back corner booth")
+        assertEquals("Back corner booth", typed.withBuilding("CDS").meetingPoint)
     }
 
     @Test
