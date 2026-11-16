@@ -13,3 +13,6 @@ data object ProfileRoute
 
 @Serializable
 data object CreatePodRoute
+
+@Serializable
+data class PodDetailRoute(val podId: String)
