@@ -1,7 +1,6 @@
 package com.reconvene.ui.pod
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -312,7 +311,8 @@ private class PodDetailPreviewStates : PreviewParameterProvider<PodDetailUiState
 @Composable
 private fun PodDetailPreview(@PreviewParameter(PodDetailPreviewStates::class) uiState: PodDetailUiState) {
     ReconveneTheme {
-        Box(Modifier.background(MaterialTheme.colorScheme.background)) {
+        // A Surface, like the app's Scaffold, so text gets the theme's color in dark mode.
+        Surface(color = MaterialTheme.colorScheme.background) {
             PodDetailContent(uiState = uiState, onBack = {})
         }
     }
