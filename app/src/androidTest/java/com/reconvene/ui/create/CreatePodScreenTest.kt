@@ -57,7 +57,7 @@ class CreatePodScreenTest {
             }
         }
 
-        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performClick()
         composeRule.onNodeWithText(string(R.string.error_building_missing)).performScrollTo().assertIsDisplayed()
         assertTrue(repository.created.isEmpty())
 
@@ -65,7 +65,7 @@ class CreatePodScreenTest {
         composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
         composeRule.onNodeWithText("Mugar Library").performClick()
         composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("2nd floor")
-        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performClick()
 
         composeRule.waitUntil(timeoutMillis = 5_000) { created }
         val pod = repository.created.single()
@@ -86,7 +86,7 @@ class CreatePodScreenTest {
         composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
         composeRule.onNodeWithText("GSU").performClick()
         composeRule.onNodeWithText("Food court tables").performScrollTo().performClick()
-        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performClick()
 
         composeRule.waitUntil(timeoutMillis = 5_000) { created }
         val pod = repository.created.single()
@@ -109,7 +109,7 @@ class CreatePodScreenTest {
         composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("Lobby")
         composeRule.onNodeWithText(threeOClock).performScrollTo().performClick()
         composeRule.onNodeWithText(string(R.string.duration_hours, 2)).performScrollTo().performClick()
-        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performClick()
 
         composeRule.waitUntil(timeoutMillis = 5_000) { created }
         val pod = repository.created.single()
@@ -137,7 +137,7 @@ class CreatePodScreenTest {
             .performClick()
         composeRule.onNodeWithText(string(R.string.action_ok)).performClick()
         composeRule.onNodeWithText(DateTimeFormatter.ofPattern("EEE, MMM d").format(friday)).performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performClick()
 
         composeRule.waitUntil(timeoutMillis = 5_000) { created }
         val pod = repository.created.single()
@@ -158,7 +158,7 @@ class CreatePodScreenTest {
         composeRule.onNodeWithText(string(R.string.create_building_other)).performScrollTo().performClick()
         composeRule.onNodeWithText(string(R.string.create_building_name)).performScrollTo().performTextInput("College of Fine Arts")
         composeRule.onNodeWithText(string(R.string.create_meeting_point)).performScrollTo().performTextInput("Lobby")
-        composeRule.onNodeWithText(string(R.string.action_create_pod)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.action_create_pod)).performClick()
 
         composeRule.waitUntil(timeoutMillis = 5_000) { created }
         assertEquals("College of Fine Arts", repository.created.single().building)

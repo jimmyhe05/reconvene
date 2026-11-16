@@ -83,7 +83,11 @@
     <string name="create_meeting_point_placeholder">Floor 2, tables by the windows</string>
     <string name="create_meeting_point_hint">A public, specific spot. Never a private address.</string>
     <string name="create_meeting_point_suggestions">Common spots here. Tap one, then edit it if you like.</string>
+    <string name="create_section_what">What</string>
+    <string name="create_section_where">Where</string>
     <string name="create_when">When</string>
+    <string name="create_section_who">Who</string>
+    <string name="create_day">Day</string>
     <string name="create_pick_date">Pick a date</string>
     <string name="create_starts">Starts</string>
     <string name="create_other_time">Other time</string>

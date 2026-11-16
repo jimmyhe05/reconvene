@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -108,7 +109,11 @@ fun CreatePodContent(
 ) {
     val form = uiState.form
     val errors = uiState.errors
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
+    ) {
         TopAppBar(
             title = { Text(stringResource(R.string.create_title)) },
             navigationIcon = {
@@ -119,62 +124,100 @@ fun CreatePodContent(
         )
         Column(
             modifier = Modifier
-                .imePadding()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             Text(
                 text = stringResource(R.string.create_intro),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            FormTextField(
-                value = form.title,
-                onValueChange = { onFormChange(form.copy(title = it)) },
-                label = stringResource(R.string.create_topic),
-                placeholder = stringResource(R.string.create_topic_placeholder),
-                maxLength = TOPIC_MAX,
-                error = errors.title?.message(),
-            )
-            FormTextField(
-                value = form.course,
-                onValueChange = { onFormChange(form.copy(course = it)) },
-                label = stringResource(R.string.create_course),
-                placeholder = "CS 501",
-                hint = stringResource(R.string.create_course_hint),
-                maxLength = COURSE_MAX,
-                capitalization = KeyboardCapitalization.Characters,
-            )
-            BuildingField(form = form, hasError = errors.building != null, onFormChange = onFormChange)
-            MeetingPointField(form = form, error = errors.meetingPoint?.message(), onFormChange = onFormChange)
-            WhenField(
-                form = form,
-                today = uiState.today,
-                startSlots = uiState.startSlots,
-                error = errors.time?.message(),
-                onFormChange = onFormChange,
-            )
-            FieldGroup(
-                label = stringResource(R.string.create_group_size),
-                hint = stringResource(R.string.create_group_size_hint, CAPACITY_MIN, CAPACITY_MAX),
-            ) {
-                CapacityStepper(capacity = form.capacity, onChange = { onFormChange(form.copy(capacity = it)) })
-            }
-            FieldGroup(label = stringResource(R.string.create_vibe), hint = stringResource(form.mode.hintRes)) {
-                ChoiceRow(
-                    options = PodMode.entries,
-                    selected = form.mode,
-                    label = { stringResource(it.labelRes) },
-                    onSelect = { mode -> mode?.let { onFormChange(form.copy(mode = it)) } },
+            FormSection(stringResource(R.string.create_section_what)) {
+                FormTextField(
+                    value = form.title,
+                    onValueChange = { onFormChange(form.copy(title = it)) },
+                    label = stringResource(R.string.create_topic),
+                    placeholder = stringResource(R.string.create_topic_placeholder),
+                    maxLength = TOPIC_MAX,
+                    error = errors.title?.message(),
+                )
+                FormTextField(
+                    value = form.course,
+                    onValueChange = { onFormChange(form.copy(course = it)) },
+                    label = stringResource(R.string.create_course),
+                    placeholder = "CS 501",
+                    hint = stringResource(R.string.create_course_hint),
+                    maxLength = COURSE_MAX,
+                    capitalization = KeyboardCapitalization.Characters,
                 )
             }
-            val problem = when {
+            FormSection(stringResource(R.string.create_section_where)) {
+                BuildingField(form = form, hasError = errors.building != null, onFormChange = onFormChange)
+                MeetingPointField(form = form, error = errors.meetingPoint?.message(), onFormChange = onFormChange)
+            }
+            FormSection(stringResource(R.string.create_when)) {
+                WhenFields(
+                    form = form,
+                    today = uiState.today,
+                    startSlots = uiState.startSlots,
+                    error = errors.time?.message(),
+                    onFormChange = onFormChange,
+                )
+            }
+            FormSection(stringResource(R.string.create_section_who)) {
+                FieldGroup(
+                    label = stringResource(R.string.create_group_size),
+                    hint = stringResource(R.string.create_group_size_hint, CAPACITY_MIN, CAPACITY_MAX),
+                ) {
+                    CapacityStepper(capacity = form.capacity, onChange = { onFormChange(form.copy(capacity = it)) })
+                }
+                FieldGroup(label = stringResource(R.string.create_vibe), hint = stringResource(form.mode.hintRes)) {
+                    ChoiceRow(
+                        options = PodMode.entries,
+                        selected = form.mode,
+                        label = { stringResource(it.labelRes) },
+                        onSelect = { mode -> mode?.let { onFormChange(form.copy(mode = it)) } },
+                    )
+                }
+            }
+        }
+        CreateBar(
+            problem = when {
                 uiState.signInRequired -> stringResource(R.string.create_sign_in_required)
                 uiState.saveFailed -> stringResource(R.string.create_save_failed)
                 !errors.isEmpty -> stringResource(R.string.create_fix_errors)
                 else -> null
-            }
+            },
+            isSaving = uiState.isSaving,
+            onCreate = onCreate,
+        )
+    }
+}
+
+// One titled part of the form. Only these titles are headings, so TalkBack can jump between parts.
+@Composable
+private fun FormSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.semantics { heading() },
+        )
+        content()
+    }
+}
+
+// Stays at the bottom of the screen, under the scrolling form, so Create is always in reach.
+@Composable
+private fun CreateBar(problem: String?, isSaving: Boolean, onCreate: () -> Unit) {
+    Column {
+        HorizontalDivider()
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             if (problem != null) {
                 Text(
                     text = problem,
@@ -185,7 +228,7 @@ fun CreatePodContent(
             }
             Button(
                 onClick = onCreate,
-                enabled = !uiState.isSaving,
+                enabled = !isSaving,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
@@ -339,11 +382,7 @@ private fun FieldGroup(
     content: @Composable () -> Unit,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.semantics { heading() },
-        )
+        Text(text = label, style = MaterialTheme.typography.titleSmall)
         content()
         if (error != null) {
             Text(
@@ -400,7 +439,7 @@ private fun <T> ChoiceRow(
 }
 
 @Composable
-private fun WhenField(
+private fun WhenFields(
     form: CreatePodForm,
     today: LocalDate,
     startSlots: List<LocalTime>,
@@ -424,7 +463,7 @@ private fun WhenField(
     val otherDay = if (form.day in quickDays) null else dayLabel(form.day, today)
     val otherTime = if (form.startTime in startSlots) null else shortTime.format(form.startTime)
 
-    FieldGroup(label = stringResource(R.string.create_when), hint = summary, error = error) {
+    FieldGroup(label = stringResource(R.string.create_day)) {
         ChoiceRow(
             options = quickDays,
             selected = form.day,
@@ -438,7 +477,8 @@ private fun WhenField(
                 onClick = { pickingDate = true },
             )
         }
-        FieldLabel(stringResource(R.string.create_starts))
+    }
+    FieldGroup(label = stringResource(R.string.create_starts)) {
         ChoiceRow(
             options = startSlots,
             selected = form.startTime,
@@ -452,7 +492,9 @@ private fun WhenField(
                 onClick = { pickingTime = true },
             )
         }
-        FieldLabel(stringResource(R.string.create_length))
+    }
+    // The summary or the time error goes under the last row, since it's about all three.
+    FieldGroup(label = stringResource(R.string.create_length), hint = summary, error = error) {
         ChoiceRow(
             options = LENGTH_CHOICES,
             selected = form.length,
