@@ -96,16 +96,27 @@ class DiscoverViewModelTest {
         )
         val viewModel = DiscoverViewModel(repository, auth, clock)
 
-        viewModel.updateFilter(PodFilter(query = "algorithms"))
+        viewModel.updateFilter { PodFilter(query = "algorithms") }
         assertEquals(listOf("algo"), viewModel.listedIds())
 
-        viewModel.updateFilter(PodFilter(query = "physics"))
+        viewModel.updateFilter { PodFilter(query = "physics") }
         val noMatches = viewModel.uiState.value as DiscoverUiState.Content
         assertEquals(0, noMatches.podCount)
         assertEquals("physics", noMatches.filter.query)
 
         viewModel.clearFilter()
         assertEquals(listOf("algo", "chem"), viewModel.listedIds())
+    }
+
+    @Test
+    fun eachFilterChangeBuildsOnTheCurrentFilter() = runTest {
+        repository.cache(listOf(testPod(startsAt = minutesFromNow(30))))
+        val viewModel = DiscoverViewModel(repository, auth, clock)
+
+        viewModel.updateFilter { it.copy(query = "mugar") }
+        viewModel.updateFilter { it.copy(today = true) }
+
+        assertEquals(PodFilter(query = "mugar", today = true), (viewModel.uiState.value as DiscoverUiState.Content).filter)
     }
 
     @Test
@@ -119,7 +130,7 @@ class DiscoverViewModelTest {
         )
         val viewModel = DiscoverViewModel(repository, auth, clock)
 
-        viewModel.updateFilter(PodFilter(mine = true))
+        viewModel.updateFilter { PodFilter(mine = true) }
 
         assertEquals(listOf("joined"), viewModel.listedIds())
     }
@@ -128,7 +139,7 @@ class DiscoverViewModelTest {
     fun filterComesBackFromSavedStateAfterProcessDeath() = runTest {
         repository.cache(listOf(testPod(startsAt = minutesFromNow(30))))
         val savedState = SavedStateHandle()
-        DiscoverViewModel(repository, auth, clock, savedState).updateFilter(PodFilter(query = "mugar", today = true))
+        DiscoverViewModel(repository, auth, clock, savedState).updateFilter { PodFilter(query = "mugar", today = true) }
 
         val restored = DiscoverViewModel(repository, auth, clock, savedState)
 

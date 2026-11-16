@@ -10,11 +10,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.maxLength
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -23,15 +33,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
@@ -56,6 +71,11 @@ fun DiscoverScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    // The search field owns its text, so typing never waits on the ViewModel; each change is passed on.
+    val search = rememberTextFieldState()
+    LaunchedEffect(search) {
+        snapshotFlow { search.text.toString() }.collect { query -> viewModel.updateFilter { it.copy(query = query) } }
+    }
     DiscoverContent(
         uiState = uiState,
         actions = PodListActions(
@@ -65,7 +85,9 @@ fun DiscoverScreen(
             onJoin = viewModel::join,
             onLeave = viewModel::leave,
             onCancel = viewModel::cancel,
+            onClearFilter = viewModel::clearFilter,
         ),
+        search = search,
         message = message,
         onMessageShown = viewModel::messageShown,
         modifier = modifier,
@@ -79,6 +101,7 @@ data class PodListActions(
     val onJoin: (podId: String) -> Unit = {},
     val onLeave: (podId: String) -> Unit = {},
     val onCancel: (podId: String) -> Unit = {},
+    val onClearFilter: () -> Unit = {},
 )
 
 @Composable
@@ -86,6 +109,7 @@ fun DiscoverContent(
     uiState: DiscoverUiState,
     actions: PodListActions,
     modifier: Modifier = Modifier,
+    search: TextFieldState = rememberTextFieldState(),
     message: PodMessage? = null,
     onMessageShown: () -> Unit = {},
 ) {
@@ -98,7 +122,7 @@ fun DiscoverContent(
         }
     }
     Box(modifier = modifier.fillMaxSize()) {
-        PodList(uiState = uiState, actions = actions)
+        PodList(uiState = uiState, actions = actions, search = search)
         if (uiState != DiscoverUiState.SignedOut) {
             CreatePodButton(actions.onCreatePod, Modifier.align(Alignment.BottomEnd))
         }
@@ -134,7 +158,7 @@ private fun CreatePodButton(onCreatePod: () -> Unit, modifier: Modifier) {
 }
 
 @Composable
-private fun PodList(uiState: DiscoverUiState, actions: PodListActions) {
+private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: TextFieldState) {
     val loadingLabel = stringResource(R.string.discover_loading)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -197,6 +221,29 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions) {
                 )
             }
             is DiscoverUiState.Content -> {
+                item(key = "search") { SearchField(search) }
+                if (uiState.filter.isActive && uiState.podCount > 0) {
+                    item(key = "match-count") { MatchCount(uiState.podCount) }
+                }
+                if (uiState.podCount == 0) {
+                    item(key = "no-matches") {
+                        EmptyState(
+                            icon = R.drawable.ic_search,
+                            title = stringResource(R.string.discover_no_matches_title),
+                            body = stringResource(R.string.discover_no_matches_body),
+                            action = {
+                                OutlinedButton(
+                                    onClick = {
+                                        search.clearText()
+                                        actions.onClearFilter()
+                                    },
+                                ) {
+                                    Text(stringResource(R.string.action_clear_filters))
+                                }
+                            },
+                        )
+                    }
+                }
                 val today = uiState.now.atZone(ZoneId.systemDefault()).toLocalDate()
                 uiState.sections.forEach { section ->
                     item(key = "section-${section.heading}") { SectionHeader(section, today) }
@@ -216,6 +263,45 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions) {
         }
     }
 }
+
+@Composable
+private fun SearchField(state: TextFieldState) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    OutlinedTextField(
+        state = state,
+        label = { Text(stringResource(R.string.discover_search)) },
+        placeholder = { Text(stringResource(R.string.discover_search_placeholder)) },
+        leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null) },
+        trailingIcon = if (state.text.isNotEmpty()) {
+            {
+                IconButton(onClick = { state.clearText() }) {
+                    Icon(painterResource(R.drawable.ic_close), contentDescription = stringResource(R.string.discover_search_clear))
+                }
+            }
+        } else {
+            null
+        },
+        inputTransformation = InputTransformation.maxLength(SEARCH_MAX),
+        lineLimits = TextFieldLineLimits.SingleLine,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        // The list already updates as you type, so Search only puts the keyboard away.
+        onKeyboardAction = { keyboard?.hide() },
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun MatchCount(count: Int) {
+    Text(
+        text = pluralStringResource(R.plurals.discover_match_count, count, count),
+        style = MaterialTheme.typography.bodySmall,
+        color = ReconveneTheme.colors.inkMuted,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
+}
+
+private const val SEARCH_MAX = 60
 
 @Composable
 private fun SectionHeader(section: PodSection, today: LocalDate) {
@@ -258,6 +344,7 @@ private class DiscoverStateProvider : PreviewParameterProvider<DiscoverUiState> 
             sections = groupIntoSections(samplePods(clock), clock.instant(), clock.zone),
             now = clock.instant(),
         ),
+        DiscoverUiState.Content(sections = emptyList(), now = clock.instant(), filter = PodFilter(query = "physics")),
         DiscoverUiState.Loading,
         DiscoverUiState.Empty,
         DiscoverUiState.Error,

@@ -63,11 +63,13 @@ class DiscoverViewModel(
 
     fun retry() = loadPods()
 
-    fun updateFilter(filter: PodFilter) {
-        savedStateHandle[FILTER_KEY] = filter
+    // Takes a change to the current filter, not a whole new one, so typing and tapping a chip
+    // can't overwrite each other with an out-of-date copy.
+    fun updateFilter(change: (PodFilter) -> PodFilter) {
+        savedStateHandle[FILTER_KEY] = change(filter.value)
     }
 
-    fun clearFilter() = updateFilter(PodFilter())
+    fun clearFilter() = updateFilter { PodFilter() }
 
     fun join(podId: String) = changePod(podId) { user ->
         podRepository.joinPod(podId, user.asMember())
