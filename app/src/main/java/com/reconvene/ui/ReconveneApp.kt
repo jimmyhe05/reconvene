@@ -34,8 +34,10 @@ import com.reconvene.ui.groups.GroupsScreen
 import com.reconvene.ui.navigation.CreatePodRoute
 import com.reconvene.ui.navigation.DiscoverRoute
 import com.reconvene.ui.navigation.GroupsRoute
+import com.reconvene.ui.navigation.PodDetailRoute
 import com.reconvene.ui.navigation.ProfileRoute
 import com.reconvene.ui.navigation.TopLevelDestination
+import com.reconvene.ui.pod.PodDetailScreen
 import com.reconvene.ui.profile.ProfileScreen
 import com.reconvene.ui.theme.ReconveneTheme
 
@@ -70,6 +72,8 @@ fun ReconveneApp() {
                 DiscoverScreen(
                     onCreatePod = dropUnlessResumed { navController.navigate(CreatePodRoute) },
                     onSignIn = { navController.navigateToTab(TopLevelDestination.PROFILE) },
+                    // Single top, so a quick double tap opens the pod once.
+                    onOpenPod = { podId -> navController.navigate(PodDetailRoute(podId)) { launchSingleTop = true } },
                 )
             }
             composable<GroupsRoute> { GroupsScreen() }
@@ -79,6 +83,9 @@ fun ReconveneApp() {
                     onBack = dropUnlessResumed { navController.popBackStack() },
                     onCreated = { navController.popBackStack() },
                 )
+            }
+            composable<PodDetailRoute> {
+                PodDetailScreen(onBack = dropUnlessResumed { navController.popBackStack() })
             }
         }
     }

@@ -51,3 +51,11 @@ val PodMode.labelRes: Int
         PodMode.COORDINATE -> R.string.mode_coordinate
         PodMode.TALK -> R.string.mode_talk
     }
+
+@get:StringRes
+val PodMode.hintRes: Int
+    get() = when (this) {
+        PodMode.QUIET -> R.string.mode_quiet_hint
+        PodMode.COORDINATE -> R.string.mode_coordinate_hint
+        PodMode.TALK -> R.string.mode_talk_hint
+    }

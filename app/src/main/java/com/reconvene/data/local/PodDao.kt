@@ -13,6 +13,10 @@ interface PodDao {
     @Query("SELECT * FROM pods WHERE id = :id")
     suspend fun getById(id: String): PodEntity?
 
+    // Emits null while no pod has this id.
+    @Query("SELECT * FROM pods WHERE id = :id")
+    fun observeById(id: String): Flow<PodEntity?>
+
     @Upsert
     suspend fun upsertAll(pods: List<PodEntity>)
 }

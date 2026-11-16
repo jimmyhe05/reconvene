@@ -4,27 +4,41 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
+// Keeps the sample pods in memory like a tiny server, so a refresh returns what was joined, left,
+// canceled or created. They reset when the app restarts.
 class FakePodRemoteDataSource(private val clock: Clock) : PodRemoteDataSource {
+
+    private val pods = MutableStateFlow<Map<String, Pod>?>(null)
 
     override suspend fun fetchPods(): List<Pod> {
         delay(700)
-        return samplePods(clock)
+        return pods.updateAndGet { it ?: samples() }!!.values.toList()
     }
 
-    // Sample pods are regenerated on every fetch, so there is nowhere to send a new one.
-    override suspend fun createPod(pod: Pod) = Unit
+    override suspend fun createPod(pod: Pod) {
+        store(pod)
+    }
 
-    // Only Room keeps the change, so the next refresh brings back the original sample pod.
-    override suspend fun joinPod(pod: Pod, member: PodMember): Pod = pod.withMember(member)
+    override suspend fun joinPod(pod: Pod, member: PodMember): Pod = store(pod.withMember(member))
 
-    override suspend fun leavePod(pod: Pod, uid: String): Pod = pod.withoutMember(uid)
+    override suspend fun leavePod(pod: Pod, uid: String): Pod = store(pod.withoutMember(uid))
 
-    override suspend fun cancelPod(pod: Pod, uid: String): Pod = pod.copy(canceled = true)
+    override suspend fun cancelPod(pod: Pod, uid: String): Pod = store(pod.copy(canceled = true))
+
+    private fun store(pod: Pod): Pod {
+        pods.update { (it ?: samples()) + (pod.id to pod) }
+        return pod
+    }
+
+    private fun samples(): Map<String, Pod> = samplePods(clock).associateBy { it.id }
 }
 
 private fun sampleMember(name: String) = PodMember(uid = "sample-${name.lowercase()}", name = name)
