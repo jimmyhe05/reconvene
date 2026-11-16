@@ -1,8 +1,10 @@
 package com.reconvene.ui.discover
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -31,10 +33,14 @@ class DiscoverViewModel(
     private val podRepository: PodRepository,
     private val authRepository: AuthRepository,
     private val clock: Clock,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<DiscoverUiState>(DiscoverUiState.Loading)
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
+
+    // Kept in saved state, so a search survives the app being closed in the background.
+    private val filter: StateFlow<PodFilter> = savedStateHandle.getStateFlow(FILTER_KEY, PodFilter())
 
     private val _message = MutableStateFlow<PodMessage?>(null)
     val message: StateFlow<PodMessage?> = _message.asStateFlow()
@@ -56,6 +62,14 @@ class DiscoverViewModel(
     }
 
     fun retry() = loadPods()
+
+    // Takes a change to the current filter, not a whole new one, so typing and tapping a chip
+    // can't overwrite each other with an out-of-date copy.
+    fun updateFilter(change: (PodFilter) -> PodFilter) {
+        savedStateHandle[FILTER_KEY] = change(filter.value)
+    }
+
+    fun clearFilter() = updateFilter { PodFilter() }
 
     fun join(podId: String) = changePod(podId) { user ->
         podRepository.joinPod(podId, user.asMember())
@@ -115,8 +129,8 @@ class DiscoverViewModel(
                     RefreshStatus.FAILED
                 }
             }
-            combine(podRepository.observePods(), refresh, busyPodIds) { pods, refreshStatus, busy ->
-                toUiState(pods, refreshStatus, user.uid, busy)
+            combine(podRepository.observePods(), refresh, busyPodIds, filter) { pods, refreshStatus, busy, filter ->
+                toUiState(pods, refreshStatus, user.uid, busy, filter)
             }
                 .catch { emit(DiscoverUiState.Error) }
                 .collect { _uiState.value = it }
@@ -128,11 +142,21 @@ class DiscoverViewModel(
         refresh: RefreshStatus,
         viewerUid: String,
         busy: Set<String>,
+        filter: PodFilter,
     ): DiscoverUiState {
         val now = clock.instant()
-        val sections = groupIntoSections(pods, now, clock.zone)
+        val listed = groupIntoSections(pods, now, clock.zone)
         return when {
-            sections.isNotEmpty() -> DiscoverUiState.Content(sections, now, viewerUid, busy)
+            // With pods listed, a filter that matches none of them still shows Content, so the
+            // search bar stays on screen and the user can change it.
+            listed.isNotEmpty() -> {
+                val sections = if (filter.isActive) {
+                    groupIntoSections(pods.filter { filter.matches(it, viewerUid, now, clock.zone) }, now, clock.zone)
+                } else {
+                    listed
+                }
+                DiscoverUiState.Content(sections, now, viewerUid, busy, filter)
+            }
             refresh == RefreshStatus.RUNNING -> DiscoverUiState.Loading
             refresh == RefreshStatus.FAILED -> DiscoverUiState.Error
             else -> DiscoverUiState.Empty
@@ -151,10 +175,17 @@ class DiscoverViewModel(
     private enum class RefreshStatus { RUNNING, DONE, FAILED }
 
     companion object {
+        private const val FILTER_KEY = "filter"
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as ReconveneApplication).container
-                DiscoverViewModel(container.podRepository, container.authRepository, container.clock)
+                DiscoverViewModel(
+                    podRepository = container.podRepository,
+                    authRepository = container.authRepository,
+                    clock = container.clock,
+                    savedStateHandle = createSavedStateHandle(),
+                )
             }
         }
     }

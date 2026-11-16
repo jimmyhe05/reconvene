@@ -15,13 +15,18 @@ sealed interface DiscoverUiState {
     // Firebase is set up but nobody is signed in. Pods are only readable by signed-in BU users.
     data object SignedOut : DiscoverUiState
 
+    // sections is empty when there are pods but the filter matches none of them.
     data class Content(
         val sections: List<PodSection>,
         val now: Instant,
         val viewerUid: String? = null,
         // Pods with a join or leave waiting for the server.
         val busyPodIds: Set<String> = emptySet(),
-    ) : DiscoverUiState
+        val filter: PodFilter = PodFilter(),
+    ) : DiscoverUiState {
+        val podCount: Int
+            get() = sections.sumOf { it.pods.size }
+    }
 }
 
 // A one-off message after a join, leave or cancel: CANCELED confirms a cancel, the rest say why

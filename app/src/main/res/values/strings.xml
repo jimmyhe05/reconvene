@@ -14,6 +14,18 @@
     <string name="discover_signed_out_title">Sign in to find study pods</string>
     <string name="discover_signed_out_body">Pods are only for BU students. Sign in with your BU Google account to see and join them.</string>
     <string name="action_sign_in">Sign in</string>
+    <string name="discover_search">Search pods</string>
+    <string name="discover_search_placeholder">Topic, course or building</string>
+    <string name="discover_search_clear">Clear search</string>
+    <string name="discover_filter_open_spots">Open spots</string>
+    <string name="discover_filter_mine">My pods</string>
+    <plurals name="discover_match_count">
+        <item quantity="one">%d pod matches</item>
+        <item quantity="other">%d pods match</item>
+    </plurals>
+    <string name="discover_no_matches_title">No pods match</string>
+    <string name="discover_no_matches_body">Try another word, or clear the filters.</string>
+    <string name="action_clear_filters">Clear search and filters</string>
 
     <string name="section_now_and_soon">Now and soon</string>
     <string name="section_later_today">Later today</string>
