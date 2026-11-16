@@ -59,6 +59,7 @@ import com.reconvene.R
 import com.reconvene.data.model.PodMode
 import com.reconvene.data.remote.samplePods
 import com.reconvene.ui.components.EmptyState
+import com.reconvene.ui.pod.PodMessage
 import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Clock
 import java.time.Instant
@@ -140,15 +141,6 @@ fun DiscoverContent(
         )
     }
 }
-
-private val PodMessage.textRes: Int
-    get() = when (this) {
-        PodMessage.CANCELED -> R.string.pod_canceled
-        PodMessage.FULL -> R.string.pod_error_full
-        PodMessage.CLOSED -> R.string.pod_error_closed
-        PodMessage.GONE -> R.string.pod_error_gone
-        PodMessage.FAILED -> R.string.pod_error_failed
-    }
 
 @Composable
 private fun CreatePodButton(onCreatePod: () -> Unit, modifier: Modifier) {

@@ -12,11 +12,10 @@ import com.reconvene.ReconveneApplication
 import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.SignedInUser
 import com.reconvene.data.auth.actingUser
-import com.reconvene.data.auth.asMember
 import com.reconvene.data.model.Pod
-import com.reconvene.data.model.PodActionException
-import com.reconvene.data.model.PodActionProblem
 import com.reconvene.data.repository.PodRepository
+import com.reconvene.ui.pod.PodActionRunner
+import com.reconvene.ui.pod.PodMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +24,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
 
@@ -42,10 +40,9 @@ class DiscoverViewModel(
     // Kept in saved state, so a search survives the app being closed in the background.
     private val filter: StateFlow<PodFilter> = savedStateHandle.getStateFlow(FILTER_KEY, PodFilter())
 
-    private val _message = MutableStateFlow<PodMessage?>(null)
-    val message: StateFlow<PodMessage?> = _message.asStateFlow()
+    private val actions = PodActionRunner(podRepository, viewModelScope)
+    val message: StateFlow<PodMessage?> = actions.message
 
-    private val busyPodIds = MutableStateFlow(emptySet<String>())
     private var viewer: SignedInUser? = null
     private var loadJob: Job? = null
 
@@ -71,43 +68,19 @@ class DiscoverViewModel(
 
     fun clearFilter() = updateFilter { PodFilter() }
 
-    fun join(podId: String) = changePod(podId) { user ->
-        podRepository.joinPod(podId, user.asMember())
+    fun join(podId: String) {
+        viewer?.let { actions.join(podId, it) }
     }
 
-    fun leave(podId: String) = changePod(podId) { user ->
-        podRepository.leavePod(podId, user.uid)
+    fun leave(podId: String) {
+        viewer?.let { actions.leave(podId, it) }
     }
 
-    // The card asks the host to confirm first. The pod then drops out of the list, so the message
-    // confirms where it went.
-    fun cancel(podId: String) = changePod(podId) { user ->
-        podRepository.cancelPod(podId, user.uid)
-        _message.value = PodMessage.CANCELED
+    fun cancel(podId: String) {
+        viewer?.let { actions.cancel(podId, it) }
     }
 
-    fun messageShown() {
-        _message.value = null
-    }
-
-    private fun changePod(podId: String, change: suspend (SignedInUser) -> Unit) {
-        val user = viewer ?: return
-        if (podId in busyPodIds.value) return
-        busyPodIds.update { it + podId }
-        viewModelScope.launch {
-            try {
-                change(user)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: PodActionException) {
-                _message.value = e.problem.toMessage()
-            } catch (e: Exception) {
-                _message.value = PodMessage.FAILED
-            } finally {
-                busyPodIds.update { it - podId }
-            }
-        }
-    }
+    fun messageShown() = actions.messageShown()
 
     private fun loadPods() {
         loadJob?.cancel()
@@ -129,7 +102,7 @@ class DiscoverViewModel(
                     RefreshStatus.FAILED
                 }
             }
-            combine(podRepository.observePods(), refresh, busyPodIds, filter) { pods, refreshStatus, busy, filter ->
+            combine(podRepository.observePods(), refresh, actions.busyPodIds, filter) { pods, refreshStatus, busy, filter ->
                 toUiState(pods, refreshStatus, user.uid, busy, filter)
             }
                 .catch { emit(DiscoverUiState.Error) }
@@ -161,15 +134,6 @@ class DiscoverViewModel(
             refresh == RefreshStatus.FAILED -> DiscoverUiState.Error
             else -> DiscoverUiState.Empty
         }
-    }
-
-    private fun PodActionProblem.toMessage(): PodMessage = when (this) {
-        PodActionProblem.FULL -> PodMessage.FULL
-        PodActionProblem.CLOSED -> PodMessage.CLOSED
-        PodActionProblem.NOT_FOUND -> PodMessage.GONE
-        // The card shows Leave only to members and Cancel only to the host, so these mean the
-        // cached pod is out of date.
-        PodActionProblem.HOST_CANNOT_LEAVE, PodActionProblem.NOT_HOST -> PodMessage.FAILED
     }
 
     private enum class RefreshStatus { RUNNING, DONE, FAILED }
