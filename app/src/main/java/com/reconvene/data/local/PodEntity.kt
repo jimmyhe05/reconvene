@@ -22,6 +22,7 @@ data class PodEntity(
     val members: List<PodMember>,
     val mode: PodMode,
     val canceled: Boolean,
+    val groupId: String?,
 )
 
 fun PodEntity.toPod() = Pod(
@@ -38,6 +39,7 @@ fun PodEntity.toPod() = Pod(
     members = members,
     mode = mode,
     canceled = canceled,
+    groupId = groupId,
 )
 
 fun Pod.toEntity() = PodEntity(
@@ -54,4 +56,5 @@ fun Pod.toEntity() = PodEntity(
     members = members,
     mode = mode,
     canceled = canceled,
+    groupId = groupId,
 )

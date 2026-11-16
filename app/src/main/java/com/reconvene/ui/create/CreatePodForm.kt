@@ -20,7 +20,10 @@ const val BUILDING_MAX = 40
 const val MEETING_POINT_MIN = 3
 const val MEETING_POINT_MAX = 80
 const val CAPACITY_MIN = 2
-const val CAPACITY_MAX = 8
+const val CAPACITY_MAX = 50
+
+// One-tap group sizes, from a small table to a big review session. The stepper reaches every size in between.
+val CAPACITY_CHOICES: List<Int> = listOf(4, 6, 8, 12, 20, 30, 50)
 const val START_WINDOW_DAYS = 7
 val MIN_DURATION: Duration = Duration.ofMinutes(30)
 val MAX_DURATION: Duration = Duration.ofHours(4)

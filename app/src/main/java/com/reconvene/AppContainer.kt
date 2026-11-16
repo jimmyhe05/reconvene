@@ -10,9 +10,12 @@ import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.FirebaseAuthRepository
 import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.local.ReconveneDatabase
+import com.reconvene.data.remote.FakeGroupRemoteDataSource
 import com.reconvene.data.remote.FakePodRemoteDataSource
 import com.reconvene.data.remote.FirestorePodRemoteDataSource
 import com.reconvene.data.remote.PodRemoteDataSource
+import com.reconvene.data.repository.GroupRepository
+import com.reconvene.data.repository.OfflineFirstGroupRepository
 import com.reconvene.data.repository.OfflineFirstPodRepository
 import com.reconvene.data.repository.PodRepository
 import java.time.Clock
@@ -33,6 +36,15 @@ class AppContainer(context: Context) {
     val podRepository: PodRepository = OfflineFirstPodRepository(
         podDao = database.podDao(),
         remote = podRemoteDataSource(),
+        clock = clock,
+    )
+
+    // Sample groups in memory for now. The Firestore source replaces it once groups have security rules.
+    val groupRepository: GroupRepository = OfflineFirstGroupRepository(
+        groupDao = database.groupDao(),
+        messageDao = database.messageDao(),
+        podDao = database.podDao(),
+        remote = FakeGroupRemoteDataSource(clock),
         clock = clock,
     )
 
