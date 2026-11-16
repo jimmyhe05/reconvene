@@ -12,6 +12,7 @@ import com.reconvene.ReconveneApplication
 import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.actingUser
 import com.reconvene.data.auth.asMember
+import com.reconvene.data.model.Pod
 import com.reconvene.data.repository.PodRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -29,6 +31,9 @@ import java.util.UUID
 data class CreatePodUiState(
     val form: CreatePodForm,
     val today: LocalDate,
+    val now: Instant,
+    // The form as a pod, for the preview card.
+    val preview: Pod,
     // Quick start times for the form's day. They depend on the current time, so they live here, not in the screen.
     val startSlots: List<LocalTime> = emptyList(),
     val errors: FormErrors = FormErrors(),
@@ -49,7 +54,13 @@ class CreatePodViewModel(
     private val _uiState = MutableStateFlow(
         ZonedDateTime.now(clock).let { now ->
             val form = savedStateHandle[FORM_KEY] ?: newPodForm(now)
-            CreatePodUiState(form = form, today = now.toLocalDate(), startSlots = startSlots(form.day, now))
+            CreatePodUiState(
+                form = form,
+                today = now.toLocalDate(),
+                now = now.toInstant(),
+                preview = form.toPreviewPod(clock.zone),
+                startSlots = startSlots(form.day, now),
+            )
         }
     )
     val uiState: StateFlow<CreatePodUiState> = _uiState.asStateFlow()
@@ -69,6 +80,8 @@ class CreatePodViewModel(
             state.copy(
                 form = form,
                 today = now.toLocalDate(),
+                now = now.toInstant(),
+                preview = form.toPreviewPod(clock.zone),
                 startSlots = startSlots(form.day, now),
                 errors = when {
                     submitted -> errors
@@ -79,10 +92,12 @@ class CreatePodViewModel(
         }
     }
 
-    // Called when the screen comes back, since both the day and the quick start times go stale.
+    // Called when the screen comes back, since the day, the time and the quick start times go stale.
     fun refreshToday() {
         val now = ZonedDateTime.now(clock)
-        _uiState.update { it.copy(today = now.toLocalDate(), startSlots = startSlots(it.form.day, now)) }
+        _uiState.update {
+            it.copy(today = now.toLocalDate(), now = now.toInstant(), startSlots = startSlots(it.form.day, now))
+        }
     }
 
     fun create() {

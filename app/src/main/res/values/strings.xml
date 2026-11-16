@@ -103,6 +103,10 @@
     <string name="create_fewer_people">Fewer people</string>
     <string name="create_more_people">More people</string>
     <string name="create_vibe">Vibe</string>
+    <string name="create_preview">Preview</string>
+    <string name="create_preview_hint">How your pod will look on Discover.</string>
+    <string name="create_preview_topic">Your study topic</string>
+    <string name="create_preview_host">you</string>
     <string name="create_fix_errors">Check the highlighted fields above.</string>
     <string name="create_save_failed">Couldn\'t save the pod. Try again.</string>
     <string name="create_sign_in_required">Sign in with your BU Google account on Profile to create a pod.</string>

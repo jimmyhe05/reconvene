@@ -128,6 +128,18 @@ class CreatePodViewModelTest {
     }
 
     @Test
+    fun previewFollowsTheForm() {
+        assertEquals("", viewModel.uiState.value.preview.title)
+
+        fillIn()
+
+        val state = viewModel.uiState.value
+        assertEquals("Algorithms exam review", state.preview.title)
+        assertEquals("Mugar Library", state.preview.building)
+        assertEquals(clock.instant(), state.now)
+    }
+
+    @Test
     fun formComesBackFromSavedStateAfterProcessDeath() {
         fillIn()
 

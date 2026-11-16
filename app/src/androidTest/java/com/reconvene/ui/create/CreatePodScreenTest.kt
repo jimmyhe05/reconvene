@@ -2,10 +2,12 @@ package com.reconvene.ui.create
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -143,6 +145,27 @@ class CreatePodScreenTest {
         val pod = repository.created.single()
         assertEquals(ZonedDateTime.of(2026, 11, 13, 14, 30, 0, 0, zone).toInstant(), pod.startsAt)
         assertEquals(ZonedDateTime.of(2026, 11, 13, 16, 0, 0, 0, zone).toInstant(), pod.endsAt)
+    }
+
+    @Test
+    fun previewCardShowsWhatWasTyped() {
+        composeRule.setContent {
+            ReconveneTheme {
+                CreatePodScreen(onBack = {}, onCreated = { created = true }, viewModel = viewModel)
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.create_preview_topic), substring = true).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.create_topic)).performScrollTo().performTextInput("Compilers midterm")
+        composeRule.onNodeWithText(string(R.string.create_building)).performScrollTo().performClick()
+        composeRule.onNodeWithText("GSU").performClick()
+        composeRule.onNodeWithText("Food court tables").performScrollTo().performClick()
+
+        // Once in the topic field and once on the preview card.
+        composeRule.onAllNodesWithText("Compilers midterm").assertCountEquals(2)
+        composeRule.onNodeWithText(string(R.string.pod_place, "GSU", "Food court tables"), substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
     }
 
     @Test

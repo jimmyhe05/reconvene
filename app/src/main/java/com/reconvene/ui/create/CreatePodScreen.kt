@@ -65,13 +65,18 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
+import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMode
+import com.reconvene.ui.discover.PodCard
 import com.reconvene.ui.discover.dayLabel
 import com.reconvene.ui.discover.labelRes
 import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -182,6 +187,9 @@ fun CreatePodContent(
                     )
                 }
             }
+            FormSection(stringResource(R.string.create_preview)) {
+                PodPreview(pod = uiState.preview, now = uiState.now)
+            }
         }
         CreateBar(
             problem = when {
@@ -207,6 +215,26 @@ private fun FormSection(title: String, content: @Composable ColumnScope.() -> Un
         )
         content()
     }
+}
+
+// The same card Discover shows, so the preview can't drift from what others will see.
+// Fields that are still blank show placeholder words instead of gaps.
+@Composable
+private fun PodPreview(pod: Pod, now: Instant) {
+    Text(
+        text = stringResource(R.string.create_preview_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    PodCard(
+        pod = pod.copy(
+            title = pod.title.ifEmpty { stringResource(R.string.create_preview_topic) },
+            building = pod.building.ifEmpty { stringResource(R.string.create_building) },
+            meetingPoint = pod.meetingPoint.ifEmpty { stringResource(R.string.create_meeting_point) },
+            hostName = stringResource(R.string.create_preview_host),
+        ),
+        now = now,
+    )
 }
 
 // Stays at the bottom of the screen, under the scrolling form, so Create is always in reach.
@@ -660,23 +688,26 @@ private val PodMode.hintRes: Int
         PodMode.TALK -> R.string.mode_talk_hint
     }
 
-private val previewToday = LocalDate.of(2026, 11, 10)
+private val previewNow = ZonedDateTime.of(2026, 11, 10, 14, 0, 0, 0, ZoneId.systemDefault())
+private val previewForm = CreatePodForm(
+    title = "Algorithms exam review",
+    building = "Mugar Library",
+    day = previewNow.toLocalDate(),
+    startTime = LocalTime.of(15, 0),
+    endTime = LocalTime.of(16, 30),
+)
 
-@Preview(showBackground = true, heightDp = 1500)
+@Preview(showBackground = true, heightDp = 1900)
 @Composable
 private fun CreatePodContentPreview() {
     ReconveneTheme {
         Surface(color = MaterialTheme.colorScheme.background) {
             CreatePodContent(
                 uiState = CreatePodUiState(
-                    form = CreatePodForm(
-                        title = "Algorithms exam review",
-                        building = "Mugar Library",
-                        day = previewToday,
-                        startTime = LocalTime.of(15, 0),
-                        endTime = LocalTime.of(16, 30),
-                    ),
-                    today = previewToday,
+                    form = previewForm,
+                    today = previewNow.toLocalDate(),
+                    now = previewNow.toInstant(),
+                    preview = previewForm.toPreviewPod(previewNow.zone),
                     startSlots = listOf(LocalTime.of(15, 0), LocalTime.of(15, 30), LocalTime.of(16, 0), LocalTime.of(16, 30)),
                     errors = FormErrors(meetingPoint = FormError.MEETING_POINT_TOO_SHORT),
                 ),

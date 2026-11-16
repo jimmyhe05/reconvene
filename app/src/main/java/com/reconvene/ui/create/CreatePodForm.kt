@@ -210,3 +210,8 @@ fun CreatePodForm.toPod(id: String, host: PodMember, zone: ZoneId) = Pod(
     members = listOf(host),
     mode = mode,
 )
+
+// The form as a pod for the preview card, which shows it before it's valid. Blank fields stay
+// blank, and the host has no name; the screen fills those in with placeholder words.
+fun CreatePodForm.toPreviewPod(zone: ZoneId): Pod =
+    copy(building = building.orEmpty()).toPod(id = "preview", host = PodMember(uid = "preview", name = ""), zone = zone)

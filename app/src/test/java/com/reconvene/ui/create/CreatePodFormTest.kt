@@ -192,6 +192,23 @@ class CreatePodFormTest {
     }
 
     @Test
+    fun previewPodWorksForABlankFormAndCountsTheHost() {
+        val blank = newPodForm(at(14, 0)).toPreviewPod(zone)
+
+        assertEquals("", blank.title)
+        assertEquals("", blank.building)
+        assertEquals(at(14, 30).toInstant(), blank.startsAt)
+        assertEquals(blank.capacity - 1, blank.spotsLeft)
+    }
+
+    @Test
+    fun previewPodMatchesThePodThatGetsCreated() {
+        val host = PodMember(uid = "preview", name = "")
+
+        assertEquals(validForm.toPod("preview", host, zone), validForm.toPreviewPod(zone))
+    }
+
+    @Test
     fun customBuildingNeedsAName() {
         val now = at(14, 0).toInstant()
         val other = validForm.copy(building = "", customBuilding = true)
