@@ -258,6 +258,8 @@ private class GroupTestPodDao : PodDao {
 
     override suspend fun getById(id: String): PodEntity? = rows.value[id]
 
+    override fun observeById(id: String): Flow<PodEntity?> = rows.map { it[id] }
+
     override suspend fun upsertAll(pods: List<PodEntity>) {
         rows.update { current -> current + pods.associateBy { it.id } }
     }
