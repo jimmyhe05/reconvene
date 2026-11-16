@@ -2,10 +2,14 @@ package com.reconvene.ui.discover
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -38,7 +42,7 @@ class DiscoverScreenTest {
     private val now = ZonedDateTime.of(2026, 11, 16, 14, 0, 0, 0, zone).toInstant()
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    private fun pod(id: String, title: String, startsAt: Instant) = Pod(
+    private fun pod(id: String, title: String, startsAt: Instant, full: Boolean = false) = Pod(
         id = id,
         title = title,
         course = null,
@@ -46,10 +50,10 @@ class DiscoverScreenTest {
         meetingPoint = "2nd floor",
         startsAt = startsAt,
         endsAt = startsAt.plus(Duration.ofHours(1)),
-        capacity = 4,
+        capacity = if (full) 2 else 4,
         hostUid = "host",
         hostName = "Host",
-        members = listOf(PodMember("host", "Host")),
+        members = listOf(PodMember("host", "Host")) + if (full) listOf(PodMember("guest", "Guest")) else emptyList(),
         mode = PodMode.QUIET,
     )
 
@@ -58,6 +62,7 @@ class DiscoverScreenTest {
         val pods = listOf(
             pod("algo", "Algorithms exam review", now.plus(Duration.ofMinutes(30))),
             pod("chem", "Organic chemistry", now.plus(Duration.ofMinutes(90))),
+            pod("calc", "Calculus review", now.plus(Duration.ofHours(4)), full = true),
         )
         val viewModel = DiscoverViewModel(StaticPodRepository(pods), UnavailableAuthRepository, Clock.fixed(now, zone))
         composeRule.setContent {
@@ -80,6 +85,21 @@ class DiscoverScreenTest {
 
         composeRule.onNodeWithText("Algorithms exam review").assertIsDisplayed()
         composeRule.onNodeWithText("Organic chemistry").assertIsDisplayed()
+    }
+
+    @Test
+    fun openSpotsChipHidesFullPodsUntilTappedAgain() {
+        val list = composeRule.onNode(hasScrollToIndexAction())
+        list.performScrollToNode(hasText("Calculus review"))
+
+        composeRule.onNodeWithText(context.getString(R.string.discover_filter_open_spots)).performScrollTo().performClick()
+        composeRule.onNodeWithText("Calculus review").assertDoesNotExist()
+        composeRule.onNodeWithText(context.resources.getQuantityString(R.plurals.discover_match_count, 2, 2))
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithText(context.getString(R.string.discover_filter_open_spots)).performClick()
+        list.performScrollToNode(hasText("Calculus review"))
+        composeRule.onNodeWithText("Calculus review").assertIsDisplayed()
     }
 
     @Test

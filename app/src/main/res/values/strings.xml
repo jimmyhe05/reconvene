@@ -17,6 +17,8 @@
     <string name="discover_search">Search pods</string>
     <string name="discover_search_placeholder">Topic, course or building</string>
     <string name="discover_search_clear">Clear search</string>
+    <string name="discover_filter_open_spots">Open spots</string>
+    <string name="discover_filter_mine">My pods</string>
     <plurals name="discover_match_count">
         <item quantity="one">%d pod matches</item>
         <item quantity="other">%d pods match</item>

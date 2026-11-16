@@ -3,6 +3,7 @@ package com.reconvene.ui.discover
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
+import com.reconvene.data.model.PodMode
 import com.reconvene.data.remote.samplePods
 import com.reconvene.ui.components.EmptyState
 import com.reconvene.ui.theme.ReconveneTheme
@@ -85,6 +88,7 @@ fun DiscoverScreen(
             onJoin = viewModel::join,
             onLeave = viewModel::leave,
             onCancel = viewModel::cancel,
+            onFilterChange = viewModel::updateFilter,
             onClearFilter = viewModel::clearFilter,
         ),
         search = search,
@@ -101,6 +105,7 @@ data class PodListActions(
     val onJoin: (podId: String) -> Unit = {},
     val onLeave: (podId: String) -> Unit = {},
     val onCancel: (podId: String) -> Unit = {},
+    val onFilterChange: (change: (PodFilter) -> PodFilter) -> Unit = {},
     val onClearFilter: () -> Unit = {},
 )
 
@@ -222,6 +227,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
             }
             is DiscoverUiState.Content -> {
                 item(key = "search") { SearchField(search) }
+                item(key = "filters") { FilterChips(uiState.filter, actions.onFilterChange) }
                 if (uiState.filter.isActive && uiState.podCount > 0) {
                     item(key = "match-count") { MatchCount(uiState.podCount) }
                 }
@@ -288,6 +294,42 @@ private fun SearchField(state: TextFieldState) {
         onKeyboardAction = { keyboard?.hide() },
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+// Each chip flips its own part of the newest filter, so quick taps can't undo each other.
+// The chips wrap onto more lines instead of scrolling sideways, so none are hidden off screen.
+@Composable
+private fun FilterChips(filter: PodFilter, onFilterChange: ((PodFilter) -> PodFilter) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterToggle(stringResource(R.string.discover_filter_open_spots), filter.openSpots) {
+            onFilterChange { it.copy(openSpots = !it.openSpots) }
+        }
+        FilterToggle(stringResource(R.string.day_today), filter.today) {
+            onFilterChange { it.copy(today = !it.today) }
+        }
+        FilterToggle(stringResource(R.string.discover_filter_mine), filter.mine) {
+            onFilterChange { it.copy(mine = !it.mine) }
+        }
+        PodMode.entries.forEach { mode ->
+            FilterToggle(stringResource(mode.labelRes), mode in filter.modes) {
+                onFilterChange { it.withMode(mode, on = mode !in it.modes) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterToggle(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = if (selected) {
+            { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
+        } else {
+            null
+        },
     )
 }
 
