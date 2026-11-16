@@ -1,0 +1,286 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "72a2ba4301d8f38dcdc60c9b85860d95",
+    "entities": [
+      {
+        "tableName": "pods",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `course` TEXT, `building` TEXT NOT NULL, `meetingPoint` TEXT NOT NULL, `startsAt` INTEGER NOT NULL, `endsAt` INTEGER NOT NULL, `capacity` INTEGER NOT NULL, `hostUid` TEXT NOT NULL, `hostName` TEXT NOT NULL, `members` TEXT NOT NULL, `mode` TEXT NOT NULL, `canceled` INTEGER NOT NULL, `groupId` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "course",
+            "columnName": "course",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "building",
+            "columnName": "building",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "meetingPoint",
+            "columnName": "meetingPoint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startsAt",
+            "columnName": "startsAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endsAt",
+            "columnName": "endsAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capacity",
+            "columnName": "capacity",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hostUid",
+            "columnName": "hostUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hostName",
+            "columnName": "hostName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "members",
+            "columnName": "members",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canceled",
+            "columnName": "canceled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "groupId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "groups",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `course` TEXT, `fromPodId` TEXT NOT NULL, `hostUid` TEXT NOT NULL, `members` TEXT NOT NULL, `invited` TEXT NOT NULL, `archivesAt` INTEGER NOT NULL, `handover_uid` TEXT, `handover_name` TEXT, `proposal_id` TEXT, `proposal_startsAt` INTEGER, `proposal_endsAt` INTEGER, `proposal_building` TEXT, `proposal_meetingPoint` TEXT, `proposal_mode` TEXT, `proposal_byUid` TEXT, `proposal_yes` TEXT, `proposal_no` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "course",
+            "columnName": "course",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fromPodId",
+            "columnName": "fromPodId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hostUid",
+            "columnName": "hostUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "members",
+            "columnName": "members",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "invited",
+            "columnName": "invited",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivesAt",
+            "columnName": "archivesAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hostHandover.uid",
+            "columnName": "handover_uid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "hostHandover.name",
+            "columnName": "handover_name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.id",
+            "columnName": "proposal_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.startsAt",
+            "columnName": "proposal_startsAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "proposal.endsAt",
+            "columnName": "proposal_endsAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "proposal.building",
+            "columnName": "proposal_building",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.meetingPoint",
+            "columnName": "proposal_meetingPoint",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.mode",
+            "columnName": "proposal_mode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.byUid",
+            "columnName": "proposal_byUid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.yes",
+            "columnName": "proposal_yes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "proposal.no",
+            "columnName": "proposal_no",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `groupId` TEXT NOT NULL, `authorUid` TEXT NOT NULL, `authorName` TEXT NOT NULL, `text` TEXT NOT NULL, `sentAt` INTEGER NOT NULL, `status` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupId",
+            "columnName": "groupId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authorUid",
+            "columnName": "authorUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authorName",
+            "columnName": "authorName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sentAt",
+            "columnName": "sentAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_messages_groupId",
+            "unique": false,
+            "columnNames": [
+              "groupId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_messages_groupId` ON `${TABLE_NAME}` (`groupId`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '72a2ba4301d8f38dcdc60c9b85860d95')"
+    ]
+  }
+}

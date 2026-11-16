@@ -17,4 +17,10 @@ class Converters {
 
     @TypeConverter
     fun jsonToMembers(value: String): List<PodMember> = Json.decodeFromString(value)
+
+    @TypeConverter
+    fun stringsToJson(value: List<String>): String = Json.encodeToString(value)
+
+    @TypeConverter
+    fun jsonToStrings(value: String): List<String> = Json.decodeFromString(value)
 }
