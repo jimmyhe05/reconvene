@@ -1,5 +1,6 @@
 package com.reconvene.ui.discover
 
+import androidx.lifecycle.SavedStateHandle
 import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodActionException
 import com.reconvene.data.model.PodActionProblem
@@ -80,6 +81,58 @@ class DiscoverViewModelTest {
             ),
             content.sections.map { section -> section.heading to section.pods.map { it.id } },
         )
+    }
+
+    private fun DiscoverViewModel.listedIds() =
+        (uiState.value as DiscoverUiState.Content).sections.flatMap { section -> section.pods.map { it.id } }
+
+    @Test
+    fun filterNarrowsTheListAndNoMatchesStillShowsContent() = runTest {
+        repository.cache(
+            listOf(
+                testPod(id = "algo", startsAt = minutesFromNow(30)).copy(title = "Algorithms exam review"),
+                testPod(id = "chem", startsAt = minutesFromNow(60)).copy(title = "Organic chemistry"),
+            )
+        )
+        val viewModel = DiscoverViewModel(repository, auth, clock)
+
+        viewModel.updateFilter(PodFilter(query = "algorithms"))
+        assertEquals(listOf("algo"), viewModel.listedIds())
+
+        viewModel.updateFilter(PodFilter(query = "physics"))
+        val noMatches = viewModel.uiState.value as DiscoverUiState.Content
+        assertEquals(0, noMatches.podCount)
+        assertEquals("physics", noMatches.filter.query)
+
+        viewModel.clearFilter()
+        assertEquals(listOf("algo", "chem"), viewModel.listedIds())
+    }
+
+    @Test
+    fun myPodsFilterUsesTheSignedInUser() = runTest {
+        val joined = testPod(id = "joined", startsAt = minutesFromNow(30))
+        repository.cache(
+            listOf(
+                joined.copy(members = joined.members + PodMember(TERRIER.uid, "Terrier")),
+                testPod(id = "other", startsAt = minutesFromNow(60)),
+            )
+        )
+        val viewModel = DiscoverViewModel(repository, auth, clock)
+
+        viewModel.updateFilter(PodFilter(mine = true))
+
+        assertEquals(listOf("joined"), viewModel.listedIds())
+    }
+
+    @Test
+    fun filterComesBackFromSavedStateAfterProcessDeath() = runTest {
+        repository.cache(listOf(testPod(startsAt = minutesFromNow(30))))
+        val savedState = SavedStateHandle()
+        DiscoverViewModel(repository, auth, clock, savedState).updateFilter(PodFilter(query = "mugar", today = true))
+
+        val restored = DiscoverViewModel(repository, auth, clock, savedState)
+
+        assertEquals(PodFilter(query = "mugar", today = true), (restored.uiState.value as DiscoverUiState.Content).filter)
     }
 
     @Test
