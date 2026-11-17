@@ -2,12 +2,16 @@ package com.reconvene.ui.pod
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -15,6 +19,7 @@ import com.reconvene.R
 import com.reconvene.data.auth.LOCAL_USER
 import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.local.ReconveneDatabase
+import com.reconvene.data.local.toEntity
 import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
@@ -24,8 +29,11 @@ import com.reconvene.data.repository.PodRepository
 import com.reconvene.ui.theme.ReconveneTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,23 +65,30 @@ class PodDetailScreenTest {
     @After
     fun closeDatabase() = database.close()
 
-    private fun pod(host: PodMember) = Pod(
+    private val you = PodMember(LOCAL_USER.uid, "You")
+
+    private fun pod(host: PodMember, members: List<PodMember> = listOf(host), startsIn: Duration = Duration.ofMinutes(30)) = Pod(
         id = "algo",
         title = "Algorithms exam review",
         course = "CS 330",
         building = "Mugar Library",
         meetingPoint = "2nd floor",
-        startsAt = now.plus(Duration.ofMinutes(30)),
-        endsAt = now.plus(Duration.ofMinutes(90)),
+        startsAt = now.plus(startsIn),
+        endsAt = now.plus(startsIn).plus(Duration.ofMinutes(60)),
         capacity = 4,
         hostUid = host.uid,
         hostName = host.name,
-        members = listOf(host),
+        members = members,
         mode = PodMode.QUIET,
     )
 
+    // Started 10 minutes ago, hosted by you, with Maya in it.
+    private val running = pod(host = you, members = listOf(you, maya), startsIn = Duration.ofMinutes(-10))
+
     // Without Firebase settings, the acting user is LOCAL_USER, shown as "You".
     private fun showDetail(pod: Pod) {
+        // Keeping a group reads the pod from Room.
+        runBlocking { database.podDao().upsertAll(listOf(pod.toEntity())) }
         val viewModel = PodDetailViewModel(pod.id, MemoryPodRepository(pod), groupRepository, UnavailableAuthRepository, clock)
         composeRule.setContent {
             ReconveneTheme {
@@ -106,6 +121,35 @@ class PodDetailScreenTest {
 
         composeRule.onNodeWithText(context.getString(R.string.pod_detail_canceled_title)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.pod_detail_back)).assertIsDisplayed()
+    }
+
+    @Test
+    fun keepingARunningPodCreatesTheGroupAndInvitesTheOthers() {
+        showDetail(running)
+        val keepThisGroup = context.getString(R.string.keep_group_action)
+
+        composeRule.onNodeWithText(keepThisGroup).performClick()
+        composeRule.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextReplacement("Algo crew")
+        composeRule.onNode(hasText(context.getString(R.string.keep_group_confirm)) and hasAnyAncestor(isDialog()))
+            .performClick()
+
+        // Room answers on its own threads, so wait for the section to go instead of assuming it has.
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithText(keepThisGroup).fetchSemanticsNodes().isEmpty() }
+        composeRule.onNodeWithText(context.getString(R.string.pod_group_kept)).assertIsDisplayed()
+        val group = runBlocking { groupRepository.observeGroups().first().single() }
+        assertEquals("Algo crew", group.name)
+        assertEquals(listOf(maya), group.invited)
+    }
+
+    @Test
+    fun aGroupNeedsANameOfAtLeastThreeCharacters() {
+        showDetail(running)
+
+        composeRule.onNodeWithText(context.getString(R.string.keep_group_action)).performClick()
+        composeRule.onNode(hasSetTextAction() and hasAnyAncestor(isDialog())).performTextReplacement("Al")
+
+        composeRule.onNode(hasText(context.getString(R.string.keep_group_confirm)) and hasAnyAncestor(isDialog()))
+            .assertIsNotEnabled()
     }
 }
 
