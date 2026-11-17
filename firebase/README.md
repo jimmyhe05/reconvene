@@ -111,7 +111,7 @@ Collection `pods`, document id = pod id (a UUID made on the device).
 | `hostUid` | string | Firebase Auth uid of the host, who made the pod |
 | `hostName` | string | the host's Google name, 1 to 40 characters |
 | `members` | map of uid to name | everyone going, the host included; at most `capacity` entries |
-| `mode` | string | `QUIET`, `COORDINATE` or `TALK` |
+| `mode` | string | `QUIET` (Quiet) or `TALK` (Open to chat). Older pods can have `COORDINATE`, which the app reads as `TALK` |
 | `canceled` | boolean | `false` on create; only the host can set it to `true`, and never back |
 
 Collection `groups`, document id = the id of the pod it was kept from.
