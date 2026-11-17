@@ -76,7 +76,9 @@ fun ReconveneApp() {
                     onOpenPod = { podId -> navController.navigate(PodDetailRoute(podId)) { launchSingleTop = true } },
                 )
             }
-            composable<GroupsRoute> { GroupsScreen() }
+            composable<GroupsRoute> {
+                GroupsScreen(onSignIn = { navController.navigateToTab(TopLevelDestination.PROFILE) })
+            }
             composable<ProfileRoute> { ProfileScreen() }
             composable<CreatePodRoute> {
                 CreatePodScreen(

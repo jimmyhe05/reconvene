@@ -74,6 +74,25 @@
     <string name="groups_declined">Invite declined.</string>
     <string name="groups_invite_gone">That invite is no longer open.</string>
     <string name="groups_archived">Groups are read-only after the semester ends.</string>
+    <string name="groups_loading">Loading groups</string>
+    <string name="groups_signed_out_title">Sign in to see your groups</string>
+    <string name="groups_signed_out_body">Groups are only for BU students. Sign in with your BU Google account to see your groups and invites.</string>
+    <string name="groups_empty_title">No groups yet</string>
+    <string name="groups_empty_body">After a pod, the host can tap Keep this group. You get a group chat and a shared plan for the rest of the semester.</string>
+    <string name="groups_error_title">Couldn\'t load groups</string>
+    <string name="groups_invites">Invites</string>
+    <string name="groups_yours">Your groups</string>
+    <string name="groups_invited_by">Invited by %1$s · %2$s</string>
+    <plurals name="groups_members">
+        <item quantity="one">%d member</item>
+        <item quantity="other">%d members</item>
+    </plurals>
+    <string name="groups_accept">Accept</string>
+    <string name="groups_decline">Decline</string>
+    <string name="groups_accept_label">Accept invite to %1$s</string>
+    <string name="groups_decline_label">Decline invite to %1$s</string>
+    <string name="groups_host">Host</string>
+    <string name="groups_private_note">Groups are private to their members and become read-only on %1$s.</string>
 
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>
