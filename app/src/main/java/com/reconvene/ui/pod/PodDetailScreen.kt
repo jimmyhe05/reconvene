@@ -77,6 +77,7 @@ fun PodDetailScreen(
         onJoin = viewModel::join,
         onLeave = viewModel::leave,
         onCancel = viewModel::cancel,
+        onKeep = viewModel::keep,
         message = message,
         onMessageShown = viewModel::messageShown,
         modifier = modifier,
@@ -93,6 +94,7 @@ fun PodDetailContent(
     onJoin: () -> Unit = {},
     onLeave: () -> Unit = {},
     onCancel: () -> Unit = {},
+    onKeep: (name: String) -> Unit = {},
     message: PodMessage? = null,
     onMessageShown: () -> Unit = {},
 ) {
@@ -144,7 +146,7 @@ fun PodDetailContent(
                         },
                     )
                 }
-                is PodDetailUiState.Content -> PodDetails(uiState, onJoin, onLeave, onCancel)
+                is PodDetailUiState.Content -> PodDetails(uiState, onJoin, onLeave, onCancel, onKeep)
             }
             SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
         }
@@ -179,6 +181,7 @@ private fun PodDetails(
     onJoin: () -> Unit,
     onLeave: () -> Unit,
     onCancel: () -> Unit,
+    onKeep: (name: String) -> Unit,
 ) {
     val pod = uiState.pod
     Column(Modifier.fillMaxSize()) {
@@ -211,6 +214,9 @@ private fun PodDetails(
                 )
             }
             WhoIsGoing(pod, uiState.viewerUid)
+            if (uiState.keep != KeepOption.HIDDEN) {
+                KeepGroupSection(pod, isKeeping = uiState.keep == KeepOption.KEEPING, onKeep = onKeep)
+            }
         }
         if (uiState.viewerUid != null) {
             HorizontalDivider()
@@ -302,6 +308,12 @@ private val previewClock = Clock.fixed(Instant.parse("2026-11-16T19:00:00Z"), Zo
 private class PodDetailPreviewStates : PreviewParameterProvider<PodDetailUiState> {
     override val values = sequenceOf(
         PodDetailUiState.Content(samplePods(previewClock).first(), previewClock.instant(), viewerUid = "sample-maya"),
+        PodDetailUiState.Content(
+            samplePods(previewClock).first(),
+            previewClock.instant(),
+            viewerUid = "sample-priya",
+            keep = KeepOption.AVAILABLE,
+        ),
         PodDetailUiState.Gone(canceledByYou = true),
         PodDetailUiState.Error,
     )

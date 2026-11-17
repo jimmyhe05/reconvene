@@ -40,6 +40,11 @@ class PodActionRunner(
         _message.value = PodMessage.CANCELED
     }
 
+    // For a screen's own actions, so every message goes through one snackbar.
+    fun show(message: PodMessage) {
+        _message.value = message
+    }
+
     fun messageShown() {
         _message.value = null
     }

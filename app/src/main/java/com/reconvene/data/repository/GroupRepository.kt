@@ -22,7 +22,8 @@ interface GroupRepository {
 
     // These keep Room matching the server until the caller is cancelled, for example by running
     // them in a ViewModel's scope while a screen is open. They throw if the server can't be read.
-    suspend fun syncGroups(uid: String)
+    // onSynced runs after each server copy is saved, so a screen can tell "no groups" from "not loaded yet".
+    suspend fun syncGroups(uid: String, onSynced: () -> Unit = {})
 
     suspend fun syncMessages(groupId: String)
 
