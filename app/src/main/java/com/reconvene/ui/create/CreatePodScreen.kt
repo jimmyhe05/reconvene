@@ -1,7 +1,6 @@
 package com.reconvene.ui.create
 
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -69,6 +68,7 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMode
 import com.reconvene.ui.discover.PodCard
 import com.reconvene.ui.discover.dayLabel
+import com.reconvene.ui.discover.hintRes
 import com.reconvene.ui.discover.labelRes
 import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Duration
@@ -695,14 +695,6 @@ private fun FormError.message(): String = when (this) {
     FormError.TOO_SHORT -> stringResource(R.string.error_too_short, MIN_DURATION.toMinutes().toInt())
     FormError.TOO_LONG -> stringResource(R.string.error_too_long, MAX_DURATION.toHours().toInt())
 }
-
-@get:StringRes
-private val PodMode.hintRes: Int
-    get() = when (this) {
-        PodMode.QUIET -> R.string.mode_quiet_hint
-        PodMode.COORDINATE -> R.string.mode_coordinate_hint
-        PodMode.TALK -> R.string.mode_talk_hint
-    }
 
 private val previewNow = ZonedDateTime.of(2026, 11, 10, 14, 0, 0, 0, ZoneId.systemDefault())
 private val previewForm = CreatePodForm(

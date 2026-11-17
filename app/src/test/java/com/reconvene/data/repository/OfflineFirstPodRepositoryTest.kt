@@ -8,6 +8,7 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodActionException
 import com.reconvene.data.model.PodActionProblem
 import com.reconvene.data.model.PodMember
+import com.reconvene.data.remote.FakePodRemoteDataSource
 import com.reconvene.data.remote.PodRemoteDataSource
 import com.reconvene.testing.TEST_HOST
 import com.reconvene.testing.testPod
@@ -47,6 +48,21 @@ class OfflineFirstPodRepositoryTest {
     }
 
     @Test
+    fun observedPodFollowsChangesAndIsNullWhenMissing() = runTest {
+        val repository = repository(TestPodRemoteDataSource { emptyList() })
+        val pod = testPod(id = "a1", startsAt = noon)
+
+        assertEquals(null, repository.observePod("a1").first())
+
+        podDao.upsertAll(listOf(pod.toEntity()))
+        assertEquals(pod, repository.observePod("a1").first())
+
+        podDao.upsertAll(listOf(pod.copy(canceled = true).toEntity()))
+        assertEquals(true, repository.observePod("a1").first()?.canceled)
+        assertEquals(null, repository.observePod("other").first())
+    }
+
+    @Test
     fun failedRefreshKeepsCachedPods() = runTest {
         podDao.upsertAll(listOf(testPod(id = "cached", startsAt = noon).toEntity()))
         val repository = repository(TestPodRemoteDataSource { throw IOException("Network unavailable") })
@@ -55,6 +71,18 @@ class OfflineFirstPodRepositoryTest {
 
         assertTrue(result.exceptionOrNull() is IOException)
         assertEquals(listOf("cached"), repository.observePods().first().map { it.id })
+    }
+
+    // Opening a pod's details refreshes, so the sample data must not undo a join made on Discover.
+    @Test
+    fun sampleDataKeepsAJoinAcrossRefreshes() = runTest {
+        val repository = repository(FakePodRemoteDataSource(clock))
+        repository.refresh()
+
+        repository.joinPod("a1", terrier)
+        repository.refresh()
+
+        assertTrue(cachedPod("a1").hasMember(terrier.uid))
     }
 
     @Test
@@ -191,6 +219,8 @@ private class FakePodDao : PodDao {
         rows.map { pods -> pods.values.sortedBy { it.startsAt } }
 
     override suspend fun getById(id: String): PodEntity? = rows.value[id]
+
+    override fun observeById(id: String): Flow<PodEntity?> = rows.map { it[id] }
 
     override suspend fun upsertAll(pods: List<PodEntity>) {
         rows.update { current -> current + pods.associateBy { it.id } }

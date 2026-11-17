@@ -22,6 +22,9 @@ class OfflineFirstPodRepository(
     override fun observePods(): Flow<List<Pod>> =
         podDao.observeAll().map { pods -> pods.map { it.toPod() } }
 
+    override fun observePod(podId: String): Flow<Pod?> =
+        podDao.observeById(podId).map { it?.toPod() }
+
     override suspend fun refresh() {
         podDao.upsertAll(remote.fetchPods().map { it.toEntity() })
     }
