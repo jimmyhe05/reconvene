@@ -9,6 +9,17 @@ rules_version = '2';
 //
 // Field names and limits must match PodFields in FirestorePodMapping.kt, the limits in CreatePodForm.kt,
 // and JOIN_CUTOFF and MEMBER_NAME_MAX in Pod.kt.
+//
+// Groups (GroupFields in FirestoreGroupMapping.kt, the rules in Group.kt). A group's id is its pod's id.
+// - Read: people in the group or invited to it, and whoever kept it, so they learn it already exists.
+// - Create: the pod's host, while the pod is running and not canceled, with someone else in it. The host
+//   is the only member and everyone else in the pod is invited, under their names in the pod.
+// - Update: one kind of change at a time, touching only its own fields, and never once the group is
+//   disbanded or the semester is over. An invited user accepts or declines for themselves. A member
+//   leaves for themselves, but the host can't; the host offers the role to a member, the host or that
+//   member calls it off, and when that member accepts they become host and the old host leaves.
+//   Only the host disbands, which marks the group and keeps it.
+// - Delete: never.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -18,6 +29,23 @@ service cloud.firestore {
       allow update: if isBuUser() && (isJoin(resource.data, request.resource.data)
                                        || isLeave(resource.data, request.resource.data)
                                        || isCancel(resource.data, request.resource.data));
+      allow delete: if false;
+    }
+
+    match /groups/{groupId} {
+      allow read: if isBuUser()
+        && (resource == null
+            || request.auth.uid in resource.data.access
+            || request.auth.uid == resource.data.keptByUid);
+      allow create: if isBuUser() && isValidNewGroup(groupId, request.resource.data);
+      allow update: if isBuUser() && isOpen(resource.data)
+        && (isAcceptInvite(resource.data, request.resource.data)
+            || isDeclineInvite(resource.data, request.resource.data)
+            || isLeaveGroup(resource.data, request.resource.data)
+            || isOfferHandover(resource.data, request.resource.data)
+            || isWithdrawHandover(resource.data, request.resource.data)
+            || isAcceptHandover(resource.data, request.resource.data)
+            || isDisband(resource.data, request.resource.data));
       allow delete: if false;
     }
 
@@ -88,6 +116,138 @@ service cloud.firestore {
         && after.canceled == true
         && request.auth.uid == before.hostUid
         && request.time < before.endsAt;
+    }
+
+    // Groups are read-only after the end of Dec 19, 2026 in Boston (SEMESTER_END in Group.kt).
+    function semesterEnd() {
+      return timestamp.value(1797742800000);
+    }
+
+    function isOpen(group) {
+      return group.disbanded == false && request.time < group.archivesAt;
+    }
+
+    // after is before with only uid's key gone.
+    function isRemovedKey(before, after, uid) {
+      let change = after.diff(before);
+      return change.removedKeys() == [uid].toSet()
+        && change.addedKeys().size() == 0
+        && change.changedKeys().size() == 0;
+    }
+
+    // after is before with only uid's key added.
+    function isAddedKey(before, after, uid) {
+      let change = after.diff(before);
+      return change.addedKeys() == [uid].toSet()
+        && change.removedKeys().size() == 0
+        && change.changedKeys().size() == 0;
+    }
+
+    // access lost uid and nothing else.
+    function isWithoutAccess(before, after, uid) {
+      return uid in before.access
+        && after.access.toSet() == before.access.toSet().difference([uid].toSet())
+        && after.access.size() == before.access.size() - 1;
+    }
+
+    function isValidNewGroup(groupId, group) {
+      let uid = request.auth.uid;
+      let pod = get(/databases/$(database)/documents/pods/$(groupId)).data;
+      // Compared with the pod's members, the invites are missing only the host and change no names.
+      let invites = pod.members.diff(group.invited);
+      let fields = ['name', 'course', 'fromPodId', 'hostUid', 'keptByUid', 'members', 'invited',
+                    'access', 'handover', 'archivesAt', 'disbanded'];
+      return group.keys().hasOnly(fields) && group.keys().hasAll(fields)
+        && group.name is string && group.name.size() >= 3 && group.name.size() <= 40
+        && group.course == pod.course
+        && group.fromPodId == groupId
+        && group.hostUid == uid && group.keptByUid == uid
+        && pod.hostUid == uid
+        && pod.canceled == false
+        && request.time >= pod.startsAt && request.time < pod.endsAt
+        && pod.members.size() >= 2 && pod.members.size() <= 50
+        && group.members is map && group.members.keys().hasOnly([uid]) && group.members.size() == 1
+        && group.members[uid] == pod.members[uid]
+        && group.invited is map
+        && invites.addedKeys() == [uid].toSet()
+        && invites.removedKeys().size() == 0
+        && invites.changedKeys().size() == 0
+        && group.access is list
+        && group.access.toSet() == pod.members.keys().toSet()
+        && group.access.size() == pod.members.size()
+        && group.handover == null
+        && group.archivesAt == semesterEnd()
+        && request.time < semesterEnd()
+        && group.disbanded == false;
+    }
+
+    // An invited user moves themselves from invited to members, under the same name.
+    function isAcceptInvite(before, after) {
+      let uid = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['members', 'invited'])
+        && isRemovedKey(before.invited, after.invited, uid)
+        && isAddedKey(before.members, after.members, uid)
+        && after.members[uid] == before.invited[uid];
+    }
+
+    // An invited user takes themselves out of invited and access.
+    function isDeclineInvite(before, after) {
+      let uid = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['invited', 'access'])
+        && isRemovedKey(before.invited, after.invited, uid)
+        && isWithoutAccess(before, after, uid);
+    }
+
+    // A member other than the host takes themselves out. A handover offered to them is called off too.
+    function isLeaveGroup(before, after) {
+      let uid = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['members', 'access', 'handover'])
+        && uid != before.hostUid
+        && isRemovedKey(before.members, after.members, uid)
+        && isWithoutAccess(before, after, uid)
+        && (after.handover == before.handover
+            || (before.handover != null && before.handover.uid == uid && after.handover == null));
+    }
+
+    // The host offers the role to another member, under their name in the group.
+    function isOfferHandover(before, after) {
+      let uid = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['handover'])
+        && uid == before.hostUid
+        && after.handover is map
+        && after.handover.keys().hasOnly(['uid', 'name']) && after.handover.keys().hasAll(['uid', 'name'])
+        && after.handover.uid != uid
+        && after.handover.uid in before.members
+        && after.handover.name == before.members[after.handover.uid];
+    }
+
+    // The host takes the offer back, or the member it was made to says no.
+    function isWithdrawHandover(before, after) {
+      let uid = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['handover'])
+        && before.handover != null
+        && after.handover == null
+        && (uid == before.hostUid || uid == before.handover.uid);
+    }
+
+    // The member offered the role takes it, and the old host leaves in the same write.
+    function isAcceptHandover(before, after) {
+      let uid = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['hostUid', 'handover', 'members', 'access'])
+        && before.handover != null
+        && before.handover.uid == uid
+        && after.hostUid == uid
+        && after.handover == null
+        && isRemovedKey(before.members, after.members, before.hostUid)
+        && isWithoutAccess(before, after, before.hostUid);
+    }
+
+    // Only the host, marking the group disbanded at the server's time.
+    function isDisband(before, after) {
+      return after.diff(before).affectedKeys().hasOnly(['disbanded', 'disbandedAt'])
+        && request.auth.uid == before.hostUid
+        && after.disbanded == true
+        && after.disbandedAt == request.time;
     }
   }
 }

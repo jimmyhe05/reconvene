@@ -62,8 +62,25 @@ themselves as a member: joining stops at capacity and 10 minutes before the end,
 leave. Only the host can cancel a pod, before it ends. Nobody can delete a pod. See the comment at the
 top of the file.
 
-Test the rules on the Firestore emulator before publishing a change. The emulator needs Java 21 (Android
-Studio's bundled JDK works) and the Firebase CLI.
+A group's id is its pod's id, so a pod can be kept as a group only once. Only the pod's host can keep it,
+while it's running and not canceled, with someone else in it; everyone else in the pod is invited and
+nobody is added without accepting. Only people in a group or invited to it can read it. Each change is
+checked on its own: users accept, decline or leave only for themselves, the host can't leave but can hand
+the role to a member, who becomes host when they accept while the old host leaves in the same write. Only
+the host disbands, which marks the group and keeps it. Nothing changes after a group is disbanded or after
+the semester ends. Nobody can delete a group.
+
+Test the rules on the Firestore emulator before publishing a change. The tests are in `rules-test/` and
+need Node, plus Java 21 or newer for the emulator (Android Studio's bundled JDK works):
+
+```bash
+cd rules-test
+npm install
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" npm test
+```
+
+`npm install` brings the Firebase CLI with it, and the tests run against a local emulator with a demo
+project, so nothing touches the real database.
 
 ## How sync works
 
@@ -74,6 +91,9 @@ Studio's bundled JDK works) and the Firebase CLI.
 | Create a pod | Saved to Room first, then handed to Firestore. Firestore keeps the write on the device and sends it when the network is back, even after a restart. |
 | Cancel a pod | The host confirms, then a transaction sets `canceled` to true on the server copy. Like joining, it needs the network. Canceled pods drop out of Discover for everyone on their next refresh. |
 | Join or leave | A Firestore transaction reads the server's copy, checks capacity and the join cutoff, and adds or removes the user's own entry in `members`. Room changes only after the server agrees. Needs the network: offline, the card shows an error and nothing changes. |
+| Groups tab open | A live listener on groups whose `access` holds the user's uid keeps Room in step. A group the user leaves or declines drops out of the results and out of Room. Offline, the listener answers from Firestore's own cache. |
+| Keep, answer an invite, leave, hand over, disband | A transaction reads the server's copy (for keeping, the pod too), checks it with the rules in `Group.kt`, and writes only the fields that change. Needs the network. |
+| Sign out or switch account | Cached groups and chat are deleted from the phone. Pods stay, since every BU student can read them. |
 | Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 
 ## Data model
@@ -87,9 +107,26 @@ Collection `pods`, document id = pod id (a UUID made on the device).
 | `building` | string | |
 | `meetingPoint` | string | 3 to 80 characters |
 | `startsAt`, `endsAt` | timestamp | 30 minutes to 4 hours apart; start within 7 days |
-| `capacity` | number | 2 to 8 |
+| `capacity` | number | 2 to 50 |
 | `hostUid` | string | Firebase Auth uid of the host, who made the pod |
 | `hostName` | string | the host's Google name, 1 to 40 characters |
 | `members` | map of uid to name | everyone going, the host included; at most `capacity` entries |
 | `mode` | string | `QUIET`, `COORDINATE` or `TALK` |
 | `canceled` | boolean | `false` on create; only the host can set it to `true`, and never back |
+
+Collection `groups`, document id = the id of the pod it was kept from.
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | string | 3 to 40 characters |
+| `course` | string or null | the pod's |
+| `fromPodId` | string | same as the document id |
+| `hostUid` | string | the current host, always in `members` |
+| `keptByUid` | string | who kept the pod; never changes, and can always read the group |
+| `members` | map of uid to name | everyone who accepted, the host included |
+| `invited` | map of uid to name | invited and hasn't answered; together with `members`, at most 50 |
+| `access` | array of uid | everyone in `members` or `invited`, sorted; the Groups tab queries it |
+| `handover` | map `{uid, name}` or null | the member the host offered the role to |
+| `archivesAt` | timestamp | end of Dec 19, 2026 in Boston; read-only after |
+| `disbanded` | boolean | `false` on create; only the host sets it to `true` |
+| `disbandedAt` | timestamp | set by the server when disbanded |

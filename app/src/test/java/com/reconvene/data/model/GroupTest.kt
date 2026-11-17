@@ -41,23 +41,44 @@ class GroupTest {
     fun onlyThePodsHostCanKeepItAndEveryoneElseIsInvited() {
         val pod = testPod(startsAt = now, members = 3)
 
-        assertEquals(GroupProblem.NOT_HOST, pod.keepProblem("member-1", "Study group"))
-        assertEquals(GroupProblem.BAD_NAME, pod.keepProblem(TEST_HOST.uid, "  A "))
-        assertNull(pod.keepProblem(TEST_HOST.uid, "Study group"))
+        assertEquals(GroupProblem.NOT_HOST, pod.keepProblem("member-1", "Study group", now))
+        assertEquals(GroupProblem.BAD_NAME, pod.keepProblem(TEST_HOST.uid, "  A ", now))
+        assertNull(pod.keepProblem(TEST_HOST.uid, "Study group", now))
 
-        val kept = pod.toNewGroup(id = "g", name = "  Study group ")
+        val kept = pod.toNewGroup(name = "  Study group ")
         assertEquals("Study group", kept.name)
+        assertEquals(pod.id, kept.id)
+        assertEquals(pod.id, kept.fromPodId)
         assertEquals(listOf(TEST_HOST), kept.members)
         assertEquals(listOf("member-1", "member-2"), kept.invited.map { it.uid })
         assertEquals(3, kept.size)
     }
 
     @Test
+    fun aPodIsKeptOnlyWhileItsRunningAndWithSomeoneToInvite() {
+        val running = testPod(startsAt = now.minus(Duration.ofMinutes(10)), members = 2)
+
+        assertNull(running.keepProblem(TEST_HOST.uid, "Study group", now))
+        assertEquals(GroupProblem.NOT_RUNNING, running.keepProblem(TEST_HOST.uid, "Study group", now.minus(Duration.ofMinutes(11))))
+        assertEquals(GroupProblem.NOT_RUNNING, running.keepProblem(TEST_HOST.uid, "Study group", running.endsAt))
+        assertEquals(
+            GroupProblem.NOT_RUNNING,
+            running.copy(canceled = true).keepProblem(TEST_HOST.uid, "Study group", now),
+        )
+        assertEquals(
+            GroupProblem.NOBODY_TO_INVITE,
+            testPod(startsAt = now, members = 1).keepProblem(TEST_HOST.uid, "Study group", now),
+        )
+        val afterSemester = testPod(startsAt = SEMESTER_END, members = 2)
+        assertEquals(GroupProblem.ARCHIVED, afterSemester.keepProblem(TEST_HOST.uid, "Study group", SEMESTER_END))
+    }
+
+    @Test
     fun aFullFiftyPersonPodCanBeKept() {
         val pod = testPod(startsAt = now, capacity = GROUP_SIZE_MAX, members = GROUP_SIZE_MAX)
 
-        assertNull(pod.keepProblem(TEST_HOST.uid, "Big review"))
-        assertEquals(GROUP_SIZE_MAX, pod.toNewGroup("g", "Big review").size)
+        assertNull(pod.keepProblem(TEST_HOST.uid, "Big review", now))
+        assertEquals(GROUP_SIZE_MAX, pod.toNewGroup("Big review").size)
     }
 
     @Test
@@ -138,6 +159,14 @@ class GroupTest {
 
         val left = voted.withoutMember(ana.uid)
         assertNull(left.proposal?.voteOf(ana.uid))
+    }
+
+    @Test
+    fun whenTheChosenMemberLeavesTheHandoverIsCalledOff() {
+        val offered = group.withHandoverOffered(ben)
+
+        assertNull(offered.withoutMember(ben.uid).hostHandover)
+        assertEquals(ben, offered.withoutMember(ana.uid).hostHandover)
     }
 
     @Test

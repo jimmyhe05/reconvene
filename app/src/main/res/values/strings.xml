@@ -80,6 +80,7 @@
     <string name="pod_error_full">That pod just filled up.</string>
     <string name="pod_error_closed">Joining that pod has closed.</string>
     <string name="pod_error_gone">That pod is no longer available.</string>
+    <string name="pod_error_cant_keep">This pod can\'t be kept as a group anymore.</string>
     <string name="pod_error_failed">Couldn\'t reach the server. Check your connection and try again.</string>
 
     <string name="groups_joined">You joined the group.</string>

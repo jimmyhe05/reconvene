@@ -118,9 +118,11 @@ data class Group(
         )
     }
 
-    // Leaving also takes back the member's vote, so it can't count toward scheduling.
+    // Leaving also takes back the member's vote, so it can't count toward scheduling, and a handover
+    // offered to them, so the host isn't left waiting on someone who's gone.
     fun withoutMember(uid: String): Group = copy(
         members = members.filterNot { it.uid == uid },
+        hostHandover = hostHandover?.takeIf { it.uid != uid },
         proposal = proposal?.withoutVote(uid),
     )
 
@@ -254,27 +256,38 @@ enum class GroupProblem {
     NOT_ENOUGH_YES,
     BAD_NAME,
     BAD_MESSAGE,
+
+    // Keeping a pod as a group: only while it's running, with someone to invite, and once per pod.
+    NOT_RUNNING,
+    NOBODY_TO_INVITE,
+    ALREADY_KEPT,
 }
 
 // latest is the group as the server has it, when the server is what said no.
 class GroupActionException(val problem: GroupProblem, val latest: Group? = null) :
     Exception("Group action refused: $problem")
 
-// Only the pod's host can keep it as a group. Everyone else in the pod gets an invite.
-fun Pod.keepProblem(uid: String, name: String): GroupProblem? = when {
+// Only the pod's host can keep it as a group, while it's running and before the semester ends, with
+// someone else in it to invite. The group's id is the pod's, so the server can't hold two groups for one
+// pod; ALREADY_KEPT comes from there.
+fun Pod.keepProblem(uid: String, name: String, now: Instant): GroupProblem? = when {
     uid != hostUid -> GroupProblem.NOT_HOST
-    name.trim().length !in GROUP_NAME_MIN..GROUP_NAME_MAX -> GroupProblem.BAD_NAME
+    canceled || now < startsAt || now >= endsAt -> GroupProblem.NOT_RUNNING
+    now >= SEMESTER_END -> GroupProblem.ARCHIVED
+    members.none { it.uid != hostUid } -> GroupProblem.NOBODY_TO_INVITE
     members.size > GROUP_SIZE_MAX -> GroupProblem.FULL
+    name.trim().length !in GROUP_NAME_MIN..GROUP_NAME_MAX -> GroupProblem.BAD_NAME
     else -> null
 }
 
-fun Pod.toNewGroup(id: String, name: String): Group {
+// Everyone else in the pod is invited; nobody is added without accepting.
+fun Pod.toNewGroup(name: String): Group {
     val host = members.first { it.uid == hostUid }
     return Group(
         id = id,
         name = name.trim(),
         course = course,
-        fromPodId = this.id,
+        fromPodId = id,
         hostUid = hostUid,
         members = listOf(host),
         invited = members.filterNot { it.uid == hostUid },

@@ -21,7 +21,9 @@ interface GroupRemoteDataSource {
     // The changes below wait for the server, which checks them against its own copy of the group.
     // They return the group as saved, or throw GroupActionException when the server's copy
     // doesn't allow the change.
-    suspend fun createGroup(group: Group)
+    // Refused with ALREADY_KEPT when the pod already has a group. Returns the group as saved, which
+    // invites whoever is in the pod by then.
+    suspend fun createGroup(group: Group): Group
 
     suspend fun answerInvite(group: Group, uid: String, accept: Boolean): Group
 

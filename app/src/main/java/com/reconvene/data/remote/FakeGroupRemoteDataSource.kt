@@ -43,9 +43,11 @@ class FakeGroupRemoteDataSource(
 
     override fun observeBlocked(uid: String): Flow<Set<String>> = blocked.map { it[uid].orEmpty() }
 
-    override suspend fun createGroup(group: Group) {
+    override suspend fun createGroup(group: Group): Group {
         delay(delayMillis)
+        groups.value[group.id]?.let { throw GroupActionException(GroupProblem.ALREADY_KEPT) }
         groups.update { it + (group.id to group) }
+        return group
     }
 
     override suspend fun answerInvite(group: Group, uid: String, accept: Boolean): Group =

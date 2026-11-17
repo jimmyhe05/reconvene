@@ -62,13 +62,15 @@ class OfflineFirstGroupRepository(
         }
     }
 
+    // The group takes the pod's id. The server checks the pod again, invites whoever is in it by then,
+    // and refuses a second group for the same pod.
     override suspend fun keepGroup(podId: String, uid: String, name: String): String {
         val pod = podDao.getById(podId)?.toPod() ?: throw GroupActionException(GroupProblem.NOT_FOUND)
-        pod.keepProblem(uid, name)?.let { throw GroupActionException(it) }
-        val group = pod.toNewGroup(id = newId(), name = name)
-        remote.createGroup(group)
-        groupDao.upsertAll(listOf(group.toEntity()))
-        return group.id
+        pod.keepProblem(uid, name, now())?.let { throw GroupActionException(it) }
+        if (groupDao.getById(podId) != null) throw GroupActionException(GroupProblem.ALREADY_KEPT)
+        val saved = remote.createGroup(pod.toNewGroup(name))
+        groupDao.upsertAll(listOf(saved.toEntity()))
+        return saved.id
     }
 
     override suspend fun answerInvite(groupId: String, uid: String, accept: Boolean) =

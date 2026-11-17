@@ -30,7 +30,8 @@ interface GroupRepository {
     // The changes below wait for the server. They throw GroupActionException when the change isn't
     // allowed, and other exceptions (for example offline) when the server couldn't be reached.
 
-    // Keeps a pod the user hosts as a group and invites everyone else in it. Returns the group's id.
+    // Keeps a running pod the user hosts as a group and invites everyone else in it. Returns the
+    // group's id, which is the pod's.
     suspend fun keepGroup(podId: String, uid: String, name: String): String
 
     suspend fun answerInvite(groupId: String, uid: String, accept: Boolean)
