@@ -124,9 +124,8 @@
     <string name="pod_detail_canceled_body">It\'s gone from Discover for everyone, including people who joined.</string>
     <string name="pod_detail_back">Back to Discover</string>
 
-    <string name="mode_quiet">Quiet company</string>
-    <string name="mode_coordinate">Okay to coordinate</string>
-    <string name="mode_talk">Open to course talk</string>
+    <string name="mode_quiet">Quiet</string>
+    <string name="mode_talk">Open to chat</string>
 
     <string name="action_back">Back</string>
     <string name="action_ok">OK</string>
@@ -178,8 +177,7 @@
     <string name="create_sign_in_required">Sign in with your BU Google account on Profile to create a pod.</string>
 
     <string name="mode_quiet_hint">Sit together and work. No chatting.</string>
-    <string name="mode_coordinate_hint">Short check-ins and quick questions are fine.</string>
-    <string name="mode_talk_hint">Happy to talk through course material.</string>
+    <string name="mode_talk_hint">Happy to talk through the material or check in.</string>
 
     <string name="duration_minutes">%d min</string>
     <string name="duration_hours">%d h</string>
