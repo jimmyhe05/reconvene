@@ -22,3 +22,8 @@ local.properties
 
 # Firebase client config. Values go in local.properties instead (see firebase/README.md).
 google-services.json
+
+# Firestore rules tests: installed packages and emulator logs.
+node_modules/
+firebase-debug.log
+firestore-debug.log
