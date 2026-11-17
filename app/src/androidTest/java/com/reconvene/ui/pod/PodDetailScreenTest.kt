@@ -8,19 +8,24 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.reconvene.R
 import com.reconvene.data.auth.LOCAL_USER
 import com.reconvene.data.auth.UnavailableAuthRepository
+import com.reconvene.data.local.ReconveneDatabase
 import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
+import com.reconvene.data.remote.FakeGroupRemoteDataSource
+import com.reconvene.data.repository.OfflineFirstGroupRepository
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.ui.theme.ReconveneTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,6 +44,18 @@ class PodDetailScreenTest {
     private val now = ZonedDateTime.of(2026, 11, 16, 14, 0, 0, 0, zone).toInstant()
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val maya = PodMember("maya", "Maya Lin")
+    private val clock = Clock.fixed(now, zone)
+    private val database = Room.inMemoryDatabaseBuilder(context, ReconveneDatabase::class.java).build()
+    private val groupRepository = OfflineFirstGroupRepository(
+        groupDao = database.groupDao(),
+        messageDao = database.messageDao(),
+        podDao = database.podDao(),
+        remote = FakeGroupRemoteDataSource(clock, delayMillis = 0),
+        clock = clock,
+    )
+
+    @After
+    fun closeDatabase() = database.close()
 
     private fun pod(host: PodMember) = Pod(
         id = "algo",
@@ -57,7 +74,7 @@ class PodDetailScreenTest {
 
     // Without Firebase settings, the acting user is LOCAL_USER, shown as "You".
     private fun showDetail(pod: Pod) {
-        val viewModel = PodDetailViewModel(pod.id, MemoryPodRepository(pod), UnavailableAuthRepository, Clock.fixed(now, zone))
+        val viewModel = PodDetailViewModel(pod.id, MemoryPodRepository(pod), groupRepository, UnavailableAuthRepository, clock)
         composeRule.setContent {
             ReconveneTheme {
                 PodDetailScreen(onBack = {}, viewModel = viewModel)

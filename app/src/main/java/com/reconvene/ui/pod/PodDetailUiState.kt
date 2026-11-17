@@ -19,5 +19,9 @@ sealed interface PodDetailUiState {
         val now: Instant,
         val viewerUid: String?,
         val isBusy: Boolean = false,
+        val keep: KeepOption = KeepOption.HIDDEN,
     ) : PodDetailUiState
 }
+
+// Whether the host can keep this pod as a group, and whether that's being sent.
+enum class KeepOption { HIDDEN, AVAILABLE, KEEPING }
