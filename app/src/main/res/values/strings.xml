@@ -70,6 +70,11 @@
     <string name="pod_error_gone">That pod is no longer available.</string>
     <string name="pod_error_failed">Couldn\'t reach the server. Check your connection and try again.</string>
 
+    <string name="groups_joined">You joined the group.</string>
+    <string name="groups_declined">Invite declined.</string>
+    <string name="groups_invite_gone">That invite is no longer open.</string>
+    <string name="groups_archived">Groups are read-only after the semester ends.</string>
+
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>
     <string name="pod_detail_loading">Loading pod</string>

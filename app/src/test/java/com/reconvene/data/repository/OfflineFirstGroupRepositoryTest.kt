@@ -1,12 +1,6 @@
 package com.reconvene.data.repository
 
 import com.reconvene.data.auth.LOCAL_USER
-import com.reconvene.data.local.GroupDao
-import com.reconvene.data.local.GroupEntity
-import com.reconvene.data.local.MessageDao
-import com.reconvene.data.local.MessageEntity
-import com.reconvene.data.local.PodDao
-import com.reconvene.data.local.PodEntity
 import com.reconvene.data.local.toEntity
 import com.reconvene.data.local.toPod
 import com.reconvene.data.model.GroupActionException
@@ -18,13 +12,12 @@ import com.reconvene.data.model.PodMode
 import com.reconvene.data.model.SessionProposal
 import com.reconvene.data.remote.FakeGroupRemoteDataSource
 import com.reconvene.data.remote.GroupRemoteDataSource
+import com.reconvene.testing.FakeGroupDao
+import com.reconvene.testing.FakeMessageDao
+import com.reconvene.testing.GroupTestPodDao
 import com.reconvene.testing.testPod
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -190,77 +183,5 @@ private class FlakyRemote(private val inner: GroupRemoteDataSource) : GroupRemot
     override suspend fun sendMessage(message: GroupMessage) {
         if (failSends) throw IOException("No connection")
         inner.sendMessage(message)
-    }
-}
-
-private class FakeMessageDao : MessageDao {
-    val rows = MutableStateFlow<Map<String, MessageEntity>>(emptyMap())
-
-    override fun observeForGroup(groupId: String): Flow<List<MessageEntity>> =
-        rows.map { all -> all.values.filter { it.groupId == groupId }.sortedWith(compareBy({ it.sentAt }, { it.id })) }
-
-    override suspend fun getById(id: String): MessageEntity? = rows.value[id]
-
-    override suspend fun upsertAll(messages: List<MessageEntity>) {
-        rows.update { it + messages.associateBy { message -> message.id } }
-    }
-
-    override suspend fun setStatus(id: String, status: MessageStatus) {
-        rows.update { all -> all[id]?.let { all + (id to it.copy(status = status)) } ?: all }
-    }
-
-    override suspend fun deleteForGroup(groupId: String) {
-        rows.update { all -> all.filterValues { it.groupId != groupId } }
-    }
-}
-
-private class FakeGroupDao(private val messages: FakeMessageDao) : GroupDao() {
-    private val rows = MutableStateFlow<Map<String, GroupEntity>>(emptyMap())
-
-    override fun observeAll(): Flow<List<GroupEntity>> =
-        rows.map { all -> all.values.sortedBy { it.name.lowercase() } }
-
-    override fun observeById(id: String): Flow<GroupEntity?> = rows.map { it[id] }
-
-    override suspend fun getById(id: String): GroupEntity? = rows.value[id]
-
-    override suspend fun upsertAll(groups: List<GroupEntity>) {
-        rows.update { it + groups.associateBy { group -> group.id } }
-    }
-
-    override suspend fun deleteById(id: String) {
-        rows.update { it - id }
-    }
-
-    override suspend fun deleteMessagesOf(id: String) = messages.deleteForGroup(id)
-
-    override suspend fun deleteAllExcept(keep: List<String>) {
-        rows.update { all -> all.filterKeys { it in keep } }
-    }
-
-    override suspend fun deleteMessagesOutside(keep: List<String>) {
-        messages.rows.update { all -> all.filterValues { it.groupId in keep } }
-    }
-
-    override suspend fun deleteAllGroups() {
-        rows.value = emptyMap()
-    }
-
-    override suspend fun deleteAllMessages() {
-        messages.rows.value = emptyMap()
-    }
-}
-
-private class GroupTestPodDao : PodDao {
-    private val rows = MutableStateFlow<Map<String, PodEntity>>(emptyMap())
-
-    override fun observeAll(): Flow<List<PodEntity>> = rows.map { pods -> pods.values.sortedBy { it.startsAt } }
-
-    override suspend fun getById(id: String): PodEntity? = rows.value[id]
-
-    override fun observeById(id: String): Flow<PodEntity?> = rows.map { it[id] }
-
-    override suspend fun upsertAll(pods: List<PodEntity>) {
-        rows.update { current -> current + pods.associateBy { it.id } }
     }
 }

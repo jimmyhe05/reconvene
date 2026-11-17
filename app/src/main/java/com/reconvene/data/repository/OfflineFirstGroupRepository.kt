@@ -48,9 +48,10 @@ class OfflineFirstGroupRepository(
     override fun observeBlocked(uid: String): Flow<Set<String>> = remote.observeBlocked(uid)
 
     // Disbanded groups come from the server so the cache can drop them.
-    override suspend fun syncGroups(uid: String) {
+    override suspend fun syncGroups(uid: String, onSynced: () -> Unit) {
         remote.observeGroups(uid).collect { groups ->
             groupDao.replaceAll(groups.filterNot { it.disbanded }.map { it.toEntity() })
+            onSynced()
         }
     }
 
