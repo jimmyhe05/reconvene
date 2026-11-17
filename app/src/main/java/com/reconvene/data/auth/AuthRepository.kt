@@ -20,8 +20,6 @@ interface AuthRepository {
     // The signed-in BU user, or null. Emits again on sign-in and sign-out.
     val currentUser: Flow<SignedInUser?>
 
-    // Signs in with a Google ID token. Throws NotBuAccountException, after signing back out,
-    // if the account isn't a verified @bu.edu address.
     suspend fun signInWithGoogleIdToken(idToken: String): SignedInUser
 
     suspend fun signOut()
@@ -43,15 +41,13 @@ object UnavailableAuthRepository : AuthRepository {
     override suspend fun signOut() = Unit
 }
 
-// Stands in for a signed-in user when the build has no Firebase settings. Pods then never leave
-// the device, so creating and joining sample pods still works for CI and a clean checkout.
+// When no Firebase:
 val LOCAL_USER = SignedInUser(uid = "local-user", email = "", displayName = "You")
 
-// Who creates and joins pods: the signed-in BU user, LOCAL_USER without Firebase, or null when
-// signed out.
+// Who creates and joins pods: the signed-in BU user, LOCAL_USER without Firebase, or null when signed out.
 fun AuthRepository.actingUser(): Flow<SignedInUser?> = if (isAvailable) currentUser else flowOf(LOCAL_USER)
 
-// How the user appears on a pod: their Google name, or the start of their email without one.
+// How the user appears on a pod
 fun SignedInUser.asMember(): PodMember {
     val name = displayName?.trim()?.takeIf { it.isNotEmpty() } ?: email.substringBefore('@')
     return PodMember(uid = uid, name = name.take(MEMBER_NAME_MAX))

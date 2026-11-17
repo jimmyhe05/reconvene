@@ -22,8 +22,7 @@ class FirestorePodRemoteDataSource(
 
     private val pods get() = firestore.collection(PODS_COLLECTION)
 
-    // Source.SERVER fails when offline instead of quietly answering from Firestore's own cache,
-    // so the repository keeps what Room already has and the screen can say the refresh failed.
+    // Source.SERVER fails when offline instead of quietly answering from Firestore's own cache.
     override suspend fun fetchPods(): List<Pod> {
         val snapshot = pods
             .whereGreaterThan(PodFields.ENDS_AT, Date.from(clock.instant()))
@@ -35,16 +34,14 @@ class FirestorePodRemoteDataSource(
         }
     }
 
-    // Not awaited: Firestore saves the write on the device and sends it when the network is back,
-    // even after a restart. Waiting for the server would leave the create button spinning offline.
+    // Not awaited: Firestore saves the write on the device and sends it when the network is back.
     override suspend fun createPod(pod: Pod) {
         pods.document(pod.id)
             .set(pod.toFirestore())
             .addOnFailureListener { e -> Log.w(TAG, "Firestore rejected pod ${pod.id}", e) }
     }
 
-    // A transaction reads the server's copy first, so a pod that filled up or closed since the last
-    // refresh is refused here with the latest copy. The security rules check the same limits.
+    // A transaction reads the server's copy first. The security rules check the same limits.
     override suspend fun joinPod(pod: Pod, member: PodMember): Pod = changePod(pod.id) { transaction, document, latest ->
         if (latest.hasMember(member.uid)) return@changePod latest
         latest.joinProblem(clock.instant())?.let { throw PodActionException(it, latest) }
@@ -59,8 +56,7 @@ class FirestorePodRemoteDataSource(
         latest.withoutMember(uid)
     }
 
-    // A transaction too, so canceling fails offline like joining does, instead of the button
-    // spinning until the network is back.
+    // A transaction too, so canceling fails offline like joining does, instead of the button spinning until the network is back.
     override suspend fun cancelPod(pod: Pod, uid: String): Pod = changePod(pod.id) { transaction, document, latest ->
         latest.cancelProblem(uid, clock.instant())?.let { throw PodActionException(it, latest) }
         if (latest.canceled) return@changePod latest
@@ -81,7 +77,6 @@ class FirestorePodRemoteDataSource(
                 change(transaction, document, latest)
             }.await()
         } catch (e: Exception) {
-            // Firestore may wrap an exception thrown inside the transaction.
             throw generateSequence<Throwable>(e) { it.cause }.filterIsInstance<PodActionException>().firstOrNull() ?: e
         }
     }

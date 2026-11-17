@@ -40,6 +40,7 @@ class ProfileViewModel(
 
     private val progress = MutableStateFlow(SignInProgress())
 
+    // current user + login progress = page state
     val uiState: StateFlow<ProfileUiState> =
         combine(authRepository.currentUser, progress) { user, progress ->
             ProfileUiState(
@@ -54,8 +55,7 @@ class ProfileViewModel(
             initialValue = ProfileUiState(isAvailable = authRepository.isAvailable),
         )
 
-    // The screen passes in how to get a Google ID token, because the account picker needs an
-    // Activity. It runs in the screen's scope, so leaving the screen cancels a pending picker.
+    // The screen passes in how to get a Google ID token, because the account picker needs an activity. It runs in the screen's scope, so leaving the screen cancels a pending picker.
     suspend fun signIn(getIdToken: suspend () -> String) {
         if (progress.value.isSigningIn) return
         progress.value = SignInProgress(isSigningIn = true)

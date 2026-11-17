@@ -9,12 +9,8 @@ CLAUDE.md
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# Android Studio project settings are per machine (JDK, devices), so each of us keeps our own.
+/.idea/
 /build
 /captures
 .externalNativeBuild
