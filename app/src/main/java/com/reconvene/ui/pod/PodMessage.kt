@@ -11,5 +11,6 @@ enum class PodMessage(@StringRes val textRes: Int) {
     FULL(R.string.pod_error_full),
     CLOSED(R.string.pod_error_closed),
     GONE(R.string.pod_error_gone),
+    CANT_KEEP(R.string.pod_error_cant_keep),
     FAILED(R.string.pod_error_failed),
 }

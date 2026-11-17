@@ -77,8 +77,23 @@ class OfflineFirstGroupRepositoryTest {
 
         val id = repository.keepGroup("mine", you.uid, "Study group")
         val kept = group(id)!!
+        assertEquals("mine", id)
         assertEquals(listOf(you), kept.members)
         assertEquals(listOf("member-1", "member-2"), kept.invited.map { it.uid })
+    }
+
+    @Test
+    fun aPodIsKeptOnceEvenAfterItsGroupLeftThisPhone() = runTest {
+        val mine = testPod(id = "mine", startsAt = clock.instant(), members = 2)
+            .let { it.copy(hostUid = you.uid, hostName = you.name, members = listOf(you) + it.members.drop(1)) }
+        podDao.upsertAll(listOf(mine.toEntity()))
+        repository.keepGroup("mine", you.uid, "Study group")
+
+        assertEquals(GroupProblem.ALREADY_KEPT, refusal { repository.keepGroup("mine", you.uid, "Again") })
+
+        // After a handover the old host isn't in the group, so it's gone from their cache; the server still says no.
+        repository.clear()
+        assertEquals(GroupProblem.ALREADY_KEPT, refusal { repository.keepGroup("mine", you.uid, "Again") })
     }
 
     @Test

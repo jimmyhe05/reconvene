@@ -12,6 +12,7 @@ import com.reconvene.ReconveneApplication
 import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.SignedInUser
 import com.reconvene.data.auth.actingUser
+import com.reconvene.data.model.GroupActionException
 import com.reconvene.data.model.Pod
 import com.reconvene.data.repository.GroupRepository
 import com.reconvene.data.repository.PodRepository
@@ -78,7 +79,8 @@ class PodDetailViewModel(
         viewer.value?.let { actions.cancel(podId, it) }
     }
 
-    // The dialog only allows a valid name, so any failure here means the server couldn't be reached.
+    // The dialog only allows a valid name. A refusal means the server saw something this screen
+    // hadn't yet (the pod ended or already has a group); anything else means it couldn't be reached.
     fun keep(name: String) {
         val user = viewer.value ?: return
         if (keeping.value) return
@@ -89,6 +91,8 @@ class PodDetailViewModel(
                 actions.show(PodMessage.GROUP_KEPT)
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: GroupActionException) {
+                actions.show(PodMessage.CANT_KEEP)
             } catch (e: Exception) {
                 actions.show(PodMessage.FAILED)
             } finally {

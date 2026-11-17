@@ -6,6 +6,7 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodActionException
 import com.reconvene.data.model.PodActionProblem
 import com.reconvene.data.model.PodMember
+import com.reconvene.data.model.toNewGroup
 import com.reconvene.data.remote.FakeGroupRemoteDataSource
 import com.reconvene.data.remote.GroupRemoteDataSource
 import com.reconvene.data.repository.OfflineFirstGroupRepository
@@ -210,14 +211,28 @@ class PodDetailViewModelTest {
         assertEquals(PodMessage.FAILED, viewModel.message.value)
         assertEquals(KeepOption.AVAILABLE, viewModel.keep())
     }
+
+    @Test
+    fun aKeepTheServerRefusesSaysThePodCantBeKept() = runTest {
+        store(running)
+        // Kept already, from another phone or before a handover, so it isn't cached here.
+        groupRemote.createGroup(running.toNewGroup("Earlier"))
+        val viewModel = viewModel()
+        watch(viewModel)
+
+        viewModel.keep("CS 501 crew")
+        advanceUntilIdle()
+
+        assertEquals(PodMessage.CANT_KEEP, viewModel.message.value)
+    }
 }
 
 // The fake group server, plus a switch to make creating a group fail the way an offline write would.
 private class FailingCreateRemote(private val inner: GroupRemoteDataSource) : GroupRemoteDataSource by inner {
     var failCreate = false
 
-    override suspend fun createGroup(group: Group) {
+    override suspend fun createGroup(group: Group): Group {
         if (failCreate) throw IOException("No connection")
-        inner.createGroup(group)
+        return inner.createGroup(group)
     }
 }
