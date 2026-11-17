@@ -43,6 +43,13 @@ class FirestorePodMappingTest {
     }
 
     @Test
+    fun anOlderOkayToCoordinatePodIsOpenToChat() {
+        val data = testPod(id = "a1", startsAt = noon).toFirestore() + (PodFields.MODE to "COORDINATE")
+
+        assertEquals(PodMode.TALK, podFromFirestore("a1", data)!!.mode)
+    }
+
+    @Test
     fun missingCanceledMeansNotCanceled() {
         val data = testPod(id = "a1", startsAt = noon, canceled = true).toFirestore()
 

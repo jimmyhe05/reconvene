@@ -48,7 +48,6 @@ fun podTimeText(pod: Pod, now: Instant, zone: ZoneId = ZoneId.systemDefault()): 
 val PodMode.labelRes: Int
     get() = when (this) {
         PodMode.QUIET -> R.string.mode_quiet
-        PodMode.COORDINATE -> R.string.mode_coordinate
         PodMode.TALK -> R.string.mode_talk
     }
 
@@ -56,6 +55,5 @@ val PodMode.labelRes: Int
 val PodMode.hintRes: Int
     get() = when (this) {
         PodMode.QUIET -> R.string.mode_quiet_hint
-        PodMode.COORDINATE -> R.string.mode_coordinate_hint
         PodMode.TALK -> R.string.mode_talk_hint
     }

@@ -70,7 +70,19 @@ data class Pod(
     fun withoutMember(uid: String): Pod = copy(members = members.filterNot { it.uid == uid })
 }
 
-enum class PodMode { QUIET, COORDINATE, TALK }
+// QUIET is "Quiet" and TALK is "Open to chat". Older pods can be saved as COORDINATE
+// ("Okay to coordinate"), which now counts as TALK.
+enum class PodMode {
+    QUIET,
+    TALK,
+    ;
+
+    companion object {
+        // The vibe saved under this name, or null if the name isn't one.
+        fun fromStored(name: String): PodMode? =
+            if (name == "COORDINATE") TALK else entries.firstOrNull { it.name == name }
+    }
+}
 
 enum class PodTiming { UPCOMING, ONGOING, ENDED, CANCELED }
 
