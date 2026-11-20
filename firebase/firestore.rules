@@ -80,7 +80,7 @@ service cloud.firestore {
         && pod.members is map
         && pod.members.keys().hasOnly([request.auth.uid]) && pod.members.size() == 1
         && pod.members[request.auth.uid] == pod.hostName
-        && pod.mode in ['QUIET', 'COORDINATE', 'TALK']
+        && pod.mode in ['QUIET', 'TALK']
         && pod.canceled == false;
     }
 
