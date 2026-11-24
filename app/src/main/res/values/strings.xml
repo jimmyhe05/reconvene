@@ -171,6 +171,12 @@
     <string name="group_plan_none_title">No next session yet</string>
     <string name="group_plan_none_body">Anyone in the group can propose a time and place. Everyone answers, and the host schedules it once enough people can come.</string>
     <string name="group_plan_read_only">Planning is closed because this group is read-only.</string>
+    <string name="group_propose">Propose next session</string>
+    <string name="group_propose_other">Propose a different time</string>
+    <string name="group_propose_replaces">A new proposal replaces this one, and everyone answers again.</string>
+    <string name="group_propose_title">Propose next session</string>
+    <string name="group_propose_intro">Pick a time and place. You\'re counted as coming, and the rest of the group can answer.</string>
+    <string name="group_propose_confirm">Propose</string>
 
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>

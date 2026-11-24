@@ -63,6 +63,7 @@ import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.ReportReason
 import com.reconvene.data.remote.sampleGroups
 import com.reconvene.ui.components.EmptyState
+import com.reconvene.ui.create.CreatePodForm
 import com.reconvene.ui.discover.dayLabel
 import com.reconvene.ui.theme.ReconveneTheme
 import java.time.Clock
@@ -95,6 +96,7 @@ fun GroupScreen(
         onBlock = viewModel::block,
         onVote = viewModel::vote,
         onSchedule = viewModel::schedule,
+        onPropose = viewModel::propose,
         notice = notice,
         onNoticeShown = viewModel::noticeShown,
         modifier = modifier,
@@ -114,6 +116,7 @@ fun GroupContent(
     onBlock: (uid: String) -> Unit = {},
     onVote: (canCome: Boolean) -> Unit = {},
     onSchedule: () -> Unit = {},
+    onPropose: (CreatePodForm) -> Unit = {},
     notice: GroupNotice? = null,
     onNoticeShown: () -> Unit = {},
 ) {
@@ -169,7 +172,7 @@ fun GroupContent(
                         GroupTabRow(tab = tab, needsYourVote = uiState.needsYourVote, onSelect = { tab = it })
                         when (tab) {
                             GroupTab.CHAT -> Chat(uiState, onRetrySync, onSend, onRetryMessage, onReport, onBlock)
-                            GroupTab.PLAN -> GroupPlan(uiState, onVote, onSchedule)
+                            GroupTab.PLAN -> GroupPlan(uiState, onVote, onSchedule, onPropose)
                         }
                     }
                 }

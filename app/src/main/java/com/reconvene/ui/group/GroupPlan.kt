@@ -18,6 +18,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -30,6 +34,7 @@ import com.reconvene.R
 import com.reconvene.data.model.SCHEDULE_YES_MIN
 import com.reconvene.data.model.SessionProposal
 import com.reconvene.ui.components.Tag
+import com.reconvene.ui.create.CreatePodForm
 import com.reconvene.ui.discover.dayLabel
 import com.reconvene.ui.discover.labelRes
 import com.reconvene.ui.theme.ReconveneTheme
@@ -48,8 +53,10 @@ fun GroupPlan(
     uiState: GroupUiState.Content,
     onVote: (canCome: Boolean) -> Unit,
     onSchedule: () -> Unit,
+    onPropose: (CreatePodForm) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var proposing by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -63,10 +70,45 @@ fun GroupPlan(
         } else {
             ProposalCard(uiState, proposal, onVote, onSchedule)
         }
-        if (uiState.isReadOnly) {
+        if (!uiState.isReadOnly) {
+            ProposeButton(replaces = proposal != null, enabled = !uiState.isBusy, onClick = { proposing = true })
+        } else {
             Text(
                 text = stringResource(R.string.group_plan_read_only),
                 style = MaterialTheme.typography.bodyMedium,
+                color = ReconveneTheme.colors.inkMuted,
+            )
+        }
+    }
+    if (proposing) {
+        ProposeDialog(
+            now = uiState.now,
+            onPropose = {
+                onPropose(it)
+                proposing = false
+            },
+            onDismiss = { proposing = false },
+        )
+    }
+}
+
+// A new proposal replaces the current one, answers included, so the button says so.
+@Composable
+private fun ProposeButton(replaces: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+        ) {
+            Text(stringResource(if (replaces) R.string.group_propose_other else R.string.group_propose))
+        }
+        if (replaces) {
+            Text(
+                text = stringResource(R.string.group_propose_replaces),
+                style = MaterialTheme.typography.bodySmall,
                 color = ReconveneTheme.colors.inkMuted,
             )
         }
