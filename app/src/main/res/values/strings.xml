@@ -119,6 +119,25 @@
     <string name="group_error_bad_proposal">That session can\'t happen anymore. Propose a new time.</string>
     <string name="group_error_not_enough_yes">Not enough people can come yet.</string>
     <string name="group_error_bad_message">That message can\'t be sent.</string>
+    <string name="group_title">Group</string>
+    <string name="group_open">Open group</string>
+    <string name="group_loading">Loading group</string>
+    <string name="group_gone_title">This group is no longer available</string>
+    <string name="group_gone_body">You may have left it, or the host disbanded it.</string>
+    <string name="group_error_title">Couldn\'t load this group</string>
+    <string name="group_back">Back to Groups</string>
+    <string name="group_you">You</string>
+    <string name="group_message_label">%1$s: %2$s. %3$s</string>
+    <string name="group_message_day_time">%1$s, %2$s</string>
+    <string name="group_sending">Sending…</string>
+    <string name="group_not_sent">Not sent</string>
+    <string name="group_retry">Retry</string>
+    <string name="group_retry_label">Retry sending your message: %1$s</string>
+    <string name="group_message_field">Message</string>
+    <string name="group_send">Send message</string>
+    <string name="group_chat_empty">No messages yet. Say hello to your group.</string>
+    <string name="group_chat_sync_failed">Couldn\'t load new messages.</string>
+    <string name="group_read_only">The semester has ended, so this group is read-only. You can still read the chat.</string>
 
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>

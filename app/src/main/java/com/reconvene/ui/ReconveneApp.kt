@@ -30,9 +30,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.reconvene.ui.create.CreatePodScreen
 import com.reconvene.ui.discover.DiscoverScreen
+import com.reconvene.ui.group.GroupScreen
 import com.reconvene.ui.groups.GroupsScreen
 import com.reconvene.ui.navigation.CreatePodRoute
 import com.reconvene.ui.navigation.DiscoverRoute
+import com.reconvene.ui.navigation.GroupRoute
 import com.reconvene.ui.navigation.GroupsRoute
 import com.reconvene.ui.navigation.PodDetailRoute
 import com.reconvene.ui.navigation.ProfileRoute
@@ -77,7 +79,10 @@ fun ReconveneApp() {
                 )
             }
             composable<GroupsRoute> {
-                GroupsScreen(onSignIn = { navController.navigateToTab(TopLevelDestination.PROFILE) })
+                GroupsScreen(
+                    onSignIn = { navController.navigateToTab(TopLevelDestination.PROFILE) },
+                    onOpenGroup = { groupId -> navController.navigate(GroupRoute(groupId)) { launchSingleTop = true } },
+                )
             }
             composable<ProfileRoute> { ProfileScreen() }
             composable<CreatePodRoute> {
@@ -88,6 +93,9 @@ fun ReconveneApp() {
             }
             composable<PodDetailRoute> {
                 PodDetailScreen(onBack = dropUnlessResumed { navController.popBackStack() })
+            }
+            composable<GroupRoute> {
+                GroupScreen(onBack = dropUnlessResumed { navController.popBackStack() })
             }
         }
     }
