@@ -66,6 +66,11 @@ fun PodCard(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 MetaLine(pod, now)
                 Text(pod.title, style = MaterialTheme.typography.titleMedium)
+                // "Starts in 20 min · 7:20 PM" or "On now, until 6:00 PM" when it's close; otherwise
+                // the time column and the section heading say it all.
+                if (pod.timing(now) == PodTiming.ONGOING || pod.startsAt < now.plus(soonWindow)) {
+                    Text(podTimeText(pod, now, zone), style = MaterialTheme.typography.bodyMedium)
+                }
                 val place = stringResource(R.string.pod_place, pod.building, pod.meetingPoint)
                 Text(
                     text = walkMinutes?.let { stringResource(R.string.pod_place_walk, place, it) } ?: place,
