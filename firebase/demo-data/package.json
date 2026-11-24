@@ -1,0 +1,13 @@
+{
+  "name": "reconvene-demo-data",
+  "private": true,
+  "description": "Puts sample pods by made-up students into Firestore, for demos.",
+  "type": "module",
+  "scripts": {
+    "seed": "node seed-demo-pods.mjs",
+    "clean": "node seed-demo-pods.mjs --clean"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1"
+  }
+}
