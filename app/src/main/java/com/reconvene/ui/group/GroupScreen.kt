@@ -15,6 +15,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -23,9 +25,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -89,6 +93,8 @@ fun GroupScreen(
         onRetryMessage = viewModel::retry,
         onReport = viewModel::report,
         onBlock = viewModel::block,
+        onVote = viewModel::vote,
+        onSchedule = viewModel::schedule,
         notice = notice,
         onNoticeShown = viewModel::noticeShown,
         modifier = modifier,
@@ -106,6 +112,8 @@ fun GroupContent(
     onRetryMessage: (messageId: String) -> Unit = {},
     onReport: (messageId: String, ReportReason) -> Unit = { _, _ -> },
     onBlock: (uid: String) -> Unit = {},
+    onVote: (canCome: Boolean) -> Unit = {},
+    onSchedule: () -> Unit = {},
     notice: GroupNotice? = null,
     onNoticeShown: () -> Unit = {},
 ) {
@@ -155,10 +163,46 @@ fun GroupContent(
                         action = { BackToGroups(onBack) },
                     )
                 }
-                is GroupUiState.Content -> Chat(uiState, onRetrySync, onSend, onRetryMessage, onReport, onBlock)
+                is GroupUiState.Content -> {
+                    var tab by rememberSaveable { mutableStateOf(GroupTab.CHAT) }
+                    Column(Modifier.fillMaxSize()) {
+                        GroupTabRow(tab = tab, needsYourVote = uiState.needsYourVote, onSelect = { tab = it })
+                        when (tab) {
+                            GroupTab.CHAT -> Chat(uiState, onRetrySync, onSend, onRetryMessage, onReport, onBlock)
+                            GroupTab.PLAN -> GroupPlan(uiState, onVote, onSchedule)
+                        }
+                    }
+                }
             }
             SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp))
         }
+    }
+}
+
+private enum class GroupTab { CHAT, PLAN }
+
+// Tabs, not one long page, so the chat keeps its height at large font sizes. The Plan tab shows a
+// dot while there's a session waiting for the viewer's answer.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupTabRow(tab: GroupTab, needsYourVote: Boolean, onSelect: (GroupTab) -> Unit) {
+    val planLabel = stringResource(if (needsYourVote) R.string.group_tab_plan_needs_vote else R.string.group_tab_plan)
+    PrimaryTabRow(selectedTabIndex = tab.ordinal) {
+        Tab(
+            selected = tab == GroupTab.CHAT,
+            onClick = { onSelect(GroupTab.CHAT) },
+            text = { Text(stringResource(R.string.group_tab_chat)) },
+        )
+        Tab(
+            selected = tab == GroupTab.PLAN,
+            onClick = { onSelect(GroupTab.PLAN) },
+            modifier = Modifier.semantics { contentDescription = planLabel },
+            text = {
+                BadgedBox(badge = { if (needsYourVote) Badge() }) {
+                    Text(stringResource(R.string.group_tab_plan))
+                }
+            },
+        )
     }
 }
 

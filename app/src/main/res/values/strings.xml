@@ -152,6 +152,25 @@
     <string name="group_block_title">Block %1$s?</string>
     <string name="group_block_body">You won\'t see their messages anymore. They won\'t be told.</string>
     <string name="group_block_confirm">Block</string>
+    <string name="group_tab_chat">Chat</string>
+    <string name="group_tab_plan">Plan</string>
+    <string name="group_tab_plan_needs_vote">Plan, needs your answer</string>
+    <string name="group_plan_next">Next session</string>
+    <string name="group_plan_proposed_by">Proposed by %1$s</string>
+    <plurals name="group_plan_can_come">
+        <item quantity="one">%d can come</item>
+        <item quantity="other">%d can come</item>
+    </plurals>
+    <string name="group_plan_yes">I can come</string>
+    <string name="group_plan_no">Can\'t make it</string>
+    <string name="group_plan_your_answer">Your answer</string>
+    <string name="group_plan_host_going">You\'re the host, so you\'re counted as going.</string>
+    <string name="group_plan_schedule">Schedule this session</string>
+    <string name="group_plan_schedule_hint">You can schedule it once %1$d people can come, counting you.</string>
+    <string name="group_plan_schedule_ready">Scheduling puts it on Discover, so everyone in the group can join.</string>
+    <string name="group_plan_none_title">No next session yet</string>
+    <string name="group_plan_none_body">Anyone in the group can propose a time and place. Everyone answers, and the host schedules it once enough people can come.</string>
+    <string name="group_plan_read_only">Planning is closed because this group is read-only.</string>
 
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>
