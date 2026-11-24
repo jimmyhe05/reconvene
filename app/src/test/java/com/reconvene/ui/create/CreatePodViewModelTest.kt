@@ -100,6 +100,8 @@ class CreatePodViewModelTest {
 
         assertTrue(viewModel.uiState.value.isCreated)
         val pod = repository.created.single()
+        // The screen opens the new pod by this id.
+        assertEquals(pod.id, viewModel.uiState.value.createdPodId)
         assertEquals("Algorithms exam review", pod.title)
         assertEquals(TERRIER.uid, pod.hostUid)
         assertEquals(listOf(PodMember(TERRIER.uid, "Terrier")), pod.members)

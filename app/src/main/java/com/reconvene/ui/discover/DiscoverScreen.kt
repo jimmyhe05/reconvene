@@ -2,7 +2,10 @@ package com.reconvene.ui.discover
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +35,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -106,6 +111,12 @@ fun DiscoverScreen(
             onCancel = viewModel::cancel,
             onFilterChange = viewModel::updateFilter,
             onClearFilter = viewModel::clearFilter,
+            // Once location has been denied twice, Android stops asking, so Settings is the only way back.
+            onOpenAppSettings = {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                )
+            },
             onNearestFirst = {
                 when {
                     nearby != Nearby.OFF -> viewModel.stopNearby()
@@ -132,6 +143,7 @@ data class PodListActions(
     val onFilterChange: (change: (PodFilter) -> PodFilter) -> Unit = {},
     val onClearFilter: () -> Unit = {},
     val onNearestFirst: () -> Unit = {},
+    val onOpenAppSettings: () -> Unit = {},
 )
 
 // Fine for walking times between buildings; the system dialog still lets people share only an
@@ -153,10 +165,20 @@ fun DiscoverContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val messageText = message?.let { stringResource(it.textRes) }
+    val actionText = message?.actionRes?.let { stringResource(it) }
     LaunchedEffect(message) {
         if (messageText != null) {
-            snackbarHostState.showSnackbar(messageText)
+            // A message with a button stays until it's used or dismissed, so there's time to tap it.
+            val result = snackbarHostState.showSnackbar(
+                message = messageText,
+                actionLabel = actionText,
+                withDismissAction = actionText != null,
+                duration = if (actionText != null) SnackbarDuration.Indefinite else SnackbarDuration.Short,
+            )
             onMessageShown()
+            if (result == SnackbarResult.ActionPerformed && message == PodMessage.LOCATION_DENIED) {
+                actions.onOpenAppSettings()
+            }
         }
     }
     Box(modifier = modifier.fillMaxSize()) {

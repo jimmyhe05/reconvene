@@ -67,6 +67,17 @@ class PodDetailViewModelTest {
     private fun viewModel() = PodDetailViewModel("a1", repository, groupRepository, auth, clock)
 
     @Test
+    fun aPodYouJustCreatedIsConfirmedOnce() = runTest {
+        repository.cache(listOf(pod))
+        val viewModel = PodDetailViewModel("a1", repository, groupRepository, auth, clock, justCreated = true)
+        watch(viewModel)
+
+        assertEquals(PodMessage.CREATED, viewModel.message.value)
+        viewModel.messageShown()
+        assertEquals(null, viewModel.message.value)
+    }
+
+    @Test
     fun theWalkingTimeFromDiscoverShowsWithThePod() = runTest {
         repository.cache(listOf(pod))
         val viewModel = PodDetailViewModel("a1", repository, groupRepository, auth, clock, walkMinutes = 6)

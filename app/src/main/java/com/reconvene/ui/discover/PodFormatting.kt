@@ -31,9 +31,10 @@ fun podTimeText(pod: Pod, now: Instant, zone: ZoneId = ZoneId.systemDefault()): 
     return when {
         pod.timing(now) == PodTiming.ONGOING ->
             stringResource(R.string.pod_time_ongoing, shortTime.format(pod.endsAt.atZone(zone)))
+        // The countdown says how soon, the clock time is what people plan around.
         untilStart < soonWindow -> {
             val minutes = untilStart.toMinutes().coerceAtLeast(1).toInt()
-            pluralStringResource(R.plurals.pod_time_starts_in, minutes, minutes)
+            pluralStringResource(R.plurals.pod_time_starts_in, minutes, minutes, shortTime.format(pod.startsAt.atZone(zone)))
         }
         else -> stringResource(
             R.string.pod_time_range,

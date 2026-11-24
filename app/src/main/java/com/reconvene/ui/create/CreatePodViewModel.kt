@@ -41,8 +41,12 @@ data class CreatePodUiState(
     val saveFailed: Boolean = false,
     // Discover hides Create pod when signed out, so this only shows if the user signed out meanwhile.
     val signInRequired: Boolean = false,
-    val isCreated: Boolean = false,
-)
+    // The new pod's id once it's saved, so the screen can open it.
+    val createdPodId: String? = null,
+) {
+    val isCreated: Boolean
+        get() = createdPodId != null
+}
 
 class CreatePodViewModel(
     private val savedStateHandle: SavedStateHandle,
@@ -116,8 +120,9 @@ class CreatePodViewModel(
                 return@launch
             }
             try {
-                podRepository.createPod(form.toPod(UUID.randomUUID().toString(), host.asMember(), clock.zone))
-                _uiState.update { it.copy(isSaving = false, isCreated = true) }
+                val id = UUID.randomUUID().toString()
+                podRepository.createPod(form.toPod(id, host.asMember(), clock.zone))
+                _uiState.update { it.copy(isSaving = false, createdPodId = id) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
