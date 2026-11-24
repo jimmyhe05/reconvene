@@ -21,3 +21,9 @@ data class PodDetailRoute(val podId: String, val walkMinutes: Int? = null, val j
 
 @Serializable
 data class GroupRoute(val groupId: String)
+
+@Serializable
+data object BlockedPeopleRoute
+
+@Serializable
+data object MeetingSafelyRoute

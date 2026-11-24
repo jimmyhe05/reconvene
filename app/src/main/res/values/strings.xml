@@ -282,6 +282,15 @@
     <string name="profile_error_not_bu">That isn\'t a BU account. Sign in with your full @bu.edu email.</string>
     <string name="profile_error_no_bu_account">No BU account on this device yet. Add it with your full BU email (name@bu.edu), then try again.</string>
     <string name="profile_blocked_heading">Blocked</string>
+    <string name="blocked_title">Blocked people</string>
+    <string name="blocked_empty">You haven\'t blocked anyone.</string>
+    <string name="safety_title">Meeting safely</string>
+    <string name="safety_intro">Everyone here signed in with a verified BU email. Still, you\'re meeting people you may not know yet.</string>
+    <string name="safety_public">Meet in a public campus spot, like a library floor or a study lounge. Never at someone\'s home.</string>
+    <string name="safety_share">Tell a friend which pod you\'re going to and when you\'ll be back.</string>
+    <string name="safety_name_only">Others see only your name. Share your number or socials only if you want to.</string>
+    <string name="safety_leave">You can leave any pod or group at any time, no explanation needed.</string>
+    <string name="safety_report">If someone makes you uncomfortable in a group chat, report the message and block them. They aren\'t told who reported them.</string>
     <string name="profile_blocked_body">They aren\'t told you blocked them. Unblock someone to see their messages again.</string>
     <string name="profile_unblock">Unblock</string>
     <string name="profile_unblock_name">Unblock %1$s</string>

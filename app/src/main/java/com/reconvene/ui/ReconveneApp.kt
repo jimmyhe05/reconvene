@@ -35,14 +35,18 @@ import com.reconvene.ui.create.CreatePodScreen
 import com.reconvene.ui.discover.DiscoverScreen
 import com.reconvene.ui.group.GroupScreen
 import com.reconvene.ui.groups.GroupsScreen
+import com.reconvene.ui.navigation.BlockedPeopleRoute
 import com.reconvene.ui.navigation.CreatePodRoute
 import com.reconvene.ui.navigation.DiscoverRoute
 import com.reconvene.ui.navigation.GroupRoute
 import com.reconvene.ui.navigation.GroupsRoute
+import com.reconvene.ui.navigation.MeetingSafelyRoute
 import com.reconvene.ui.navigation.PodDetailRoute
 import com.reconvene.ui.navigation.ProfileRoute
 import com.reconvene.ui.navigation.TopLevelDestination
 import com.reconvene.ui.pod.PodDetailScreen
+import com.reconvene.ui.profile.BlockedPeopleScreen
+import com.reconvene.ui.profile.MeetingSafelyScreen
 import com.reconvene.ui.profile.ProfileScreen
 import com.reconvene.ui.theme.ReconveneTheme
 
@@ -106,6 +110,12 @@ fun ReconveneApp() {
             }
             composable<GroupRoute> {
                 GroupScreen(onBack = dropUnlessResumed { navController.popBackStack() })
+            }
+            composable<BlockedPeopleRoute> {
+                BlockedPeopleScreen(onBack = dropUnlessResumed { navController.popBackStack() })
+            }
+            composable<MeetingSafelyRoute> {
+                MeetingSafelyScreen(onBack = dropUnlessResumed { navController.popBackStack() })
             }
         }
     }
