@@ -40,7 +40,7 @@ fun EmptyState(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .dashedBorder(colors.outlineStrong, cornerRadius = 28.dp)
+            .dashedBorder(colors.outlineStrong, cornerRadius = 8.dp)
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),

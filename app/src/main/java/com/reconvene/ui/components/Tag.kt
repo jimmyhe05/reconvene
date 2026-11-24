@@ -1,7 +1,6 @@
 package com.reconvene.ui.components
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -15,7 +14,7 @@ fun Tag(text: String, modifier: Modifier = Modifier, accent: Boolean = false) {
     val colors = ReconveneTheme.colors
     Surface(
         modifier = modifier,
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.extraSmall,
         color = if (accent) colors.primaryContainer else colors.surfaceVariant,
         contentColor = if (accent) colors.onPrimaryContainer else colors.ink,
     ) {

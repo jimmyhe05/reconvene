@@ -123,6 +123,7 @@ fun ProposeDialog(
                         )
                     }
                     Button(
+                        shape = MaterialTheme.shapes.small,
                         onClick = {
                             submitted = true
                             if (form.proposalErrors(now, zone).isEmpty) onPropose(form)

@@ -139,7 +139,7 @@ fun PodDetailContent(
                         title = stringResource(R.string.pod_detail_error_title),
                         body = stringResource(R.string.discover_error_body),
                         action = {
-                            FilledTonalButton(onClick = onRetry) {
+                            FilledTonalButton(shape = MaterialTheme.shapes.small, onClick = onRetry) {
                                 Text(stringResource(R.string.action_retry))
                             }
                         },
@@ -155,7 +155,7 @@ fun PodDetailContent(
                             if (uiState.canceledByYou) R.string.pod_detail_canceled_body else R.string.pod_detail_gone_body,
                         ),
                         action = {
-                            OutlinedButton(onClick = onBack) {
+                            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onBack) {
                                 Text(stringResource(R.string.pod_detail_back))
                             }
                         },
@@ -228,7 +228,7 @@ private fun PodDetails(
                         label = stringResource(R.string.pod_detail_where),
                         value = uiState.walkMinutes?.let { stringResource(R.string.pod_place_walk, place, it) } ?: place,
                     )
-                    OutlinedButton(onClick = onOpenMaps) {
+                    OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onOpenMaps) {
                         Icon(
                             painterResource(R.drawable.ic_pin),
                             contentDescription = null,

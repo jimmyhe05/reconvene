@@ -234,7 +234,7 @@ private fun CenteredState(content: @Composable () -> Unit) {
 
 @Composable
 private fun BackToGroups(onBack: () -> Unit) {
-    OutlinedButton(onClick = onBack) {
+    OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onBack) {
         Text(stringResource(R.string.group_back))
     }
 }
