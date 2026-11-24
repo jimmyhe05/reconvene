@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,9 +53,16 @@ import com.reconvene.ui.theme.ReconveneTheme
 
 private const val MAX_NAV_LABEL_SCALE = 1.5f
 
+// podToOpen is a pod a tapped reminder asks for; it's opened over whatever is showing.
 @Composable
-fun ReconveneApp() {
+fun ReconveneApp(podToOpen: String? = null, onPodOpened: () -> Unit = {}) {
     val navController = rememberNavController()
+    LaunchedEffect(podToOpen) {
+        if (podToOpen != null) {
+            navController.navigate(PodDetailRoute(podToOpen)) { launchSingleTop = true }
+            onPodOpened()
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val onTopLevel = currentDestination == null ||

@@ -1,5 +1,6 @@
 package com.reconvene
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,15 +10,24 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.reconvene.data.reminders.ReminderNotifications
 import com.reconvene.data.settings.Appearance
 import com.reconvene.ui.ReconveneApp
 import com.reconvene.ui.theme.ReconveneTheme
 
 class MainActivity : ComponentActivity() {
+
+    // The pod a tapped reminder asks to open, until the app has opened it.
+    private var podToOpen by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Only a fresh start: after rotation the pod is already open.
+        if (savedInstanceState == null) podToOpen = intent.getStringExtra(ReminderNotifications.EXTRA_POD_ID)
         val settings = (application as ReconveneApplication).container.settingsRepository
         setContent {
             val appearance by settings.appearance.collectAsStateWithLifecycle(Appearance.SYSTEM)
@@ -36,8 +46,14 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             ReconveneTheme(darkTheme = darkTheme) {
-                ReconveneApp()
+                ReconveneApp(podToOpen = podToOpen, onPodOpened = { podToOpen = null })
             }
         }
+    }
+
+    // A reminder tapped while the app is already open.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra(ReminderNotifications.EXTRA_POD_ID)?.let { podToOpen = it }
     }
 }
