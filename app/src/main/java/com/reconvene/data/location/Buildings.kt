@@ -55,4 +55,5 @@ fun Pod.mapLink(): String {
         ?: "geo:0,0?q=${encode("$building, Boston University")}"
 }
 
-private fun encode(text: String): String = URLEncoder.encode(text, Charsets.UTF_8).replace("+", "%20")
+// The charset-name overload, since the Charset one only exists from Android 13.
+private fun encode(text: String): String = URLEncoder.encode(text, "UTF-8").replace("+", "%20")

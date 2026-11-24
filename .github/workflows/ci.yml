@@ -29,6 +29,9 @@ jobs:
       - name: Build and run unit tests
         run: ./gradlew assembleDebug testDebugUnitTest
 
+      - name: Lint
+        run: ./gradlew lintDebug
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
@@ -40,4 +43,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-reports
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
