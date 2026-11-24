@@ -82,6 +82,24 @@ JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" npm test
 `npm install` brings the Firebase CLI with it, and the tests run against a local emulator with a demo
 project, so nothing touches the real database.
 
+## Demo pods
+
+`demo-data/seed-demo-pods.mjs` puts 10 pods hosted by made-up students into Firestore, so Discover
+has something to show in a demo. Their ids and uids start with `demo-`. Times are placed around
+`--at` (default: now): one already running, several in the next two hours, more over the next two
+days. Running it again resets them, which also removes anyone who joined.
+
+```bash
+gcloud auth application-default login
+cd firebase/demo-data && npm install
+node seed-demo-pods.mjs --project <firebase-project-id> --at 2026-11-24T14:00 --dry-run
+node seed-demo-pods.mjs --project <firebase-project-id> --at 2026-11-24T14:00
+node seed-demo-pods.mjs --project <firebase-project-id> --clean
+```
+
+It writes with admin access from your Google login, which skips the security rules; there is no
+key file. Only run it against our own project.
+
 ## How sync works
 
 | Action | What happens |
