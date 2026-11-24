@@ -16,6 +16,8 @@ import com.reconvene.data.auth.asMember
 import com.reconvene.data.model.Group
 import com.reconvene.data.model.GroupActionException
 import com.reconvene.data.model.GroupMessage
+import com.reconvene.data.model.GroupProblem
+import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.ReportReason
 import com.reconvene.data.repository.GroupRepository
 import com.reconvene.ui.create.CreatePodForm
@@ -103,8 +105,13 @@ class GroupViewModel(
         groupRepository.report(groupId, messageId, user.uid, reason)
     }
 
+    // Saved with the name their messages show, so Profile can list them to unblock.
     fun block(blockedUid: String) = runAction(GroupNotice.BLOCKED) { user ->
-        groupRepository.block(user.uid, blockedUid)
+        val content = uiState.value as? GroupUiState.Content
+        val name = content?.messages?.firstOrNull { it.authorUid == blockedUid }?.authorName
+            ?: content?.group?.members?.firstOrNull { it.uid == blockedUid }?.name
+            ?: throw GroupActionException(GroupProblem.NOT_FOUND)
+        groupRepository.block(user.uid, PodMember(blockedUid, name))
     }
 
     fun propose(form: CreatePodForm) = runAction(GroupNotice.PROPOSED) { user ->

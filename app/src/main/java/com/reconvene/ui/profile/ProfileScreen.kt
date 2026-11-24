@@ -2,19 +2,24 @@ package com.reconvene.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -28,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
 import com.reconvene.data.auth.SignedInUser
+import com.reconvene.data.model.PodMember
 import kotlinx.coroutines.launch
 
 @Composable
@@ -46,6 +52,7 @@ fun ProfileScreen(
             }
         },
         onSignOut = viewModel::signOut,
+        onUnblock = viewModel::unblock,
         modifier = modifier,
     )
 }
@@ -56,9 +63,11 @@ fun ProfileContent(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
+    onUnblock: (uid: String) -> Unit = {},
 ) {
     Column(
-        modifier.fillMaxSize().padding(horizontal = 16.dp),
+        // Scrolls once the blocked list is longer than the screen.
+        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
@@ -71,6 +80,7 @@ fun ProfileContent(
         val user = uiState.user
         if (user != null) {
             SignedIn(user, onSignOut)
+            BlockedPeople(uiState.blocked, uiState.unblockFailed, onUnblock)
         } else {
             SignedOut(uiState, onSignIn)
         }
@@ -85,6 +95,51 @@ private fun SignedIn(user: SignedInUser, onSignOut: () -> Unit) {
     Text(stringResource(R.string.profile_bu_verified), style = MaterialTheme.typography.labelLarge)
     OutlinedButton(onClick = onSignOut, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(stringResource(R.string.profile_sign_out))
+    }
+}
+
+// Hidden until the user has blocked someone.
+@Composable
+private fun BlockedPeople(blocked: List<PodMember>, unblockFailed: Boolean, onUnblock: (uid: String) -> Unit) {
+    if (blocked.isEmpty() && !unblockFailed) return
+    Column(
+        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.profile_blocked_heading),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = stringResource(R.string.profile_blocked_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        blocked.forEach { person ->
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(person.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                // "Unblock Ben" rather than a row of identical "Unblock" buttons for a screen reader.
+                val label = stringResource(R.string.profile_unblock_name, person.name)
+                TextButton(
+                    onClick = { onUnblock(person.uid) },
+                    modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = label },
+                ) {
+                    Text(stringResource(R.string.profile_unblock))
+                }
+            }
+        }
+        if (unblockFailed) {
+            Text(
+                text = stringResource(R.string.profile_unblock_failed),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
     }
 }
 

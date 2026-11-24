@@ -45,7 +45,11 @@ class OfflineFirstGroupRepository(
     override fun observeMessages(groupId: String): Flow<List<GroupMessage>> =
         messageDao.observeForGroup(groupId).map { messages -> messages.map { it.toMessage() } }
 
-    override fun observeBlocked(uid: String): Flow<Set<String>> = remote.observeBlocked(uid)
+    override fun observeBlocked(uid: String): Flow<Set<String>> =
+        remote.observeBlocked(uid).map { people -> people.mapTo(mutableSetOf()) { it.uid } }
+
+    override fun observeBlockedPeople(uid: String): Flow<List<PodMember>> =
+        remote.observeBlocked(uid).map { people -> people.sortedBy { it.name.lowercase() } }
 
     // Disbanded groups come from the server so the cache can drop them.
     override suspend fun syncGroups(uid: String, onSynced: () -> Unit) {
@@ -160,7 +164,7 @@ class OfflineFirstGroupRepository(
         remote.report(MessageReport(groupId, messageId, reporterUid, message.authorUid, reason))
     }
 
-    override suspend fun block(uid: String, blockedUid: String) = remote.block(uid, blockedUid)
+    override suspend fun block(uid: String, blocked: PodMember) = remote.block(uid, blocked)
 
     override suspend fun unblock(uid: String, blockedUid: String) = remote.unblock(uid, blockedUid)
 

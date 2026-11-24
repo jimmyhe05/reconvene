@@ -16,7 +16,8 @@ interface GroupRemoteDataSource {
     // A message the server doesn't have yet comes back as SENDING.
     fun observeMessages(groupId: String): Flow<List<GroupMessage>>
 
-    fun observeBlocked(uid: String): Flow<Set<String>>
+    // Who this user blocked, under the name they had when blocked.
+    fun observeBlocked(uid: String): Flow<List<PodMember>>
 
     // The changes below wait for the server, which checks them against its own copy of the group.
     // They return the group as saved, or throw GroupActionException when the server's copy
@@ -50,7 +51,7 @@ interface GroupRemoteDataSource {
 
     suspend fun report(report: MessageReport)
 
-    suspend fun block(uid: String, blockedUid: String)
+    suspend fun block(uid: String, blocked: PodMember)
 
     suspend fun unblock(uid: String, blockedUid: String)
 }

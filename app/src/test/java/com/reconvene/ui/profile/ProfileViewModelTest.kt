@@ -5,6 +5,12 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.NotBuAccountException
 import com.reconvene.data.auth.SignedInUser
+import com.reconvene.data.model.PodMember
+import com.reconvene.data.remote.FakeGroupRemoteDataSource
+import com.reconvene.data.repository.OfflineFirstGroupRepository
+import com.reconvene.testing.FakeGroupDao
+import com.reconvene.testing.FakeMessageDao
+import com.reconvene.testing.GroupTestPodDao
 import com.reconvene.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,9 +21,13 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.IOException
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProfileViewModelTest {
@@ -28,7 +38,16 @@ class ProfileViewModelTest {
     private val terrier = SignedInUser(uid = "u1", email = "terrier@bu.edu", displayName = "Terrier")
     private val auth = FakeAuthRepository()
 
-    private fun viewModel() = ProfileViewModel(auth, googleWebClientId = "web-client")
+    private val clock = Clock.fixed(Instant.parse("2026-11-24T15:00:00Z"), ZoneOffset.UTC)
+    private val groupRemote = FakeGroupRemoteDataSource(clock, delayMillis = 0)
+    private val messageDao = FakeMessageDao()
+    private val groups =
+        OfflineFirstGroupRepository(FakeGroupDao(messageDao), messageDao, GroupTestPodDao(), groupRemote, clock) { "new" }
+
+    private val ben = PodMember("ben", "Ben")
+    private val ana = PodMember("ana", "Ana")
+
+    private fun viewModel() = ProfileViewModel(auth, groups, googleWebClientId = "web-client")
 
     @Test
     fun successfulSignInShowsTheUser() = runTest {
@@ -100,6 +119,38 @@ class ProfileViewModelTest {
         viewModel.signOut()
 
         assertNull(viewModel.uiState.value.user)
+    }
+
+    @Test
+    fun blockedPeopleShowByNameAndGoOnUnblock() = runTest {
+        groups.block(terrier.uid, ben)
+        groups.block(terrier.uid, ana)
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+        assertTrue(viewModel.uiState.value.blocked.isEmpty())
+
+        viewModel.signIn { "token" }
+        assertEquals(listOf(ana, ben), viewModel.uiState.value.blocked)
+
+        viewModel.unblock(ben.uid)
+        assertEquals(listOf(ana), viewModel.uiState.value.blocked)
+        assertFalse(viewModel.uiState.value.unblockFailed)
+    }
+
+    @Test
+    fun anotherAccountsBlocksDontShow() = runTest {
+        groups.block("someone-else", ben)
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+
+        viewModel.signIn { "token" }
+        assertTrue(viewModel.uiState.value.blocked.isEmpty())
+
+        groups.block(terrier.uid, ben)
+        assertEquals(listOf(ben), viewModel.uiState.value.blocked)
+
+        viewModel.signOut()
+        assertTrue(viewModel.uiState.value.blocked.isEmpty())
     }
 
     private inner class FakeAuthRepository : AuthRepository {

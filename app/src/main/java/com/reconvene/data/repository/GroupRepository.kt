@@ -20,6 +20,9 @@ interface GroupRepository {
     // Who this user blocked. Their messages should be hidden.
     fun observeBlocked(uid: String): Flow<Set<String>>
 
+    // The same people with their names, by name, for the list where they can be unblocked.
+    fun observeBlockedPeople(uid: String): Flow<List<PodMember>>
+
     // These keep Room matching the server until the caller is cancelled, for example by running
     // them in a ViewModel's scope while a screen is open. They throw if the server can't be read.
     // onSynced runs after each server copy is saved, so a screen can tell "no groups" from "not loaded yet".
@@ -64,7 +67,8 @@ interface GroupRepository {
 
     suspend fun report(groupId: String, messageId: String, reporterUid: String, reason: ReportReason)
 
-    suspend fun block(uid: String, blockedUid: String)
+    // One way: the blocked person isn't told and still sees this user's messages.
+    suspend fun block(uid: String, blocked: PodMember)
 
     suspend fun unblock(uid: String, blockedUid: String)
 

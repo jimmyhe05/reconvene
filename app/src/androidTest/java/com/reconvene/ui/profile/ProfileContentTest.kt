@@ -4,12 +4,16 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.reconvene.R
+import com.reconvene.data.auth.SignedInUser
+import com.reconvene.data.model.PodMember
 import com.reconvene.ui.theme.ReconveneTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -55,5 +59,43 @@ class ProfileContentTest {
         }
 
         composeRule.onNodeWithText(string(R.string.profile_error_no_bu_account)).assertIsDisplayed()
+    }
+
+    private val terrier = SignedInUser(uid = "u1", email = "terrier@bu.edu", displayName = "Terrier")
+
+    @Test
+    fun blockedPeopleCanBeUnblockedByName() {
+        var unblocked: String? = null
+        composeRule.setContent {
+            ReconveneTheme {
+                ProfileContent(
+                    uiState = ProfileUiState(
+                        isAvailable = true,
+                        user = terrier,
+                        blocked = listOf(PodMember("ana", "Ana"), PodMember("ben", "Ben")),
+                    ),
+                    onSignIn = {},
+                    onSignOut = {},
+                    onUnblock = { unblocked = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.profile_blocked_heading)).assertIsDisplayed()
+        composeRule.onNodeWithText("Ana").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Unblock Ben").performClick()
+        assertEquals("ben", unblocked)
+    }
+
+    @Test
+    fun noBlockedSectionUntilSomeoneIsBlocked() {
+        composeRule.setContent {
+            ReconveneTheme {
+                ProfileContent(uiState = ProfileUiState(isAvailable = true, user = terrier), onSignIn = {}, onSignOut = {})
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.profile_sign_out)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.profile_blocked_heading)).assertDoesNotExist()
     }
 }
