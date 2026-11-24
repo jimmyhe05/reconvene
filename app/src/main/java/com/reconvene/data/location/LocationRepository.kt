@@ -2,14 +2,17 @@ package com.reconvene.data.location
 
 import android.Manifest
 import android.content.Context
+import android.location.Location
 import android.location.LocationManager
 import android.os.Build
+import android.os.SystemClock
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.core.os.CancellationSignal
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.Duration
 import kotlin.coroutines.resume
 
 interface LocationRepository {
@@ -21,6 +24,19 @@ interface LocationRepository {
 // For builds and tests with no location, like a phone with location switched off.
 object UnavailableLocationRepository : LocationRepository {
     override suspend fun currentLocation(): GeoPoint? = null
+}
+
+// Where the phone last knew it was, and how long ago.
+data class LastKnown(val point: GeoPoint, val age: Duration)
+
+private val RECENT: Duration = Duration.ofMinutes(2)
+private val STILL_USABLE: Duration = Duration.ofMinutes(30)
+
+// A recent last-known location answers at once. Otherwise a fresh fix is worth the wait, but if
+// none comes, a location from the last half hour is still close enough for walking times on campus.
+suspend fun chooseLocation(lastKnown: LastKnown?, requestFresh: suspend () -> GeoPoint?): GeoPoint? {
+    if (lastKnown != null && lastKnown.age <= RECENT) return lastKnown.point
+    return requestFresh() ?: lastKnown?.takeIf { it.age <= STILL_USABLE }?.point
 }
 
 class DeviceLocationRepository(context: Context) : LocationRepository {
@@ -36,7 +52,19 @@ class DeviceLocationRepository(context: Context) : LocationRepository {
     }
 
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION])
-    private suspend fun locate(): GeoPoint? {
+    private suspend fun locate(): GeoPoint? = chooseLocation(newestLastKnown()) { requestFresh() }
+
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION])
+    private fun newestLastKnown(): LastKnown? =
+        locationManager.getProviders(true)
+            .mapNotNull { locationManager.getLastKnownLocation(it) }
+            .maxByOrNull { it.elapsedRealtimeNanos }
+            ?.let { LastKnown(GeoPoint(it.latitude, it.longitude), it.age()) }
+
+    private fun Location.age(): Duration = Duration.ofNanos(SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos)
+
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION])
+    private suspend fun requestFresh(): GeoPoint? {
         val provider = bestProvider() ?: return null
         return withTimeoutOrNull(TIMEOUT_MILLIS) {
             suspendCancellableCoroutine { continuation ->
