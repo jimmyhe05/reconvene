@@ -14,6 +14,9 @@ const val MESSAGE_MAX = 500
 // The host can schedule a proposed session once this many people say they can come.
 const val SCHEDULE_YES_MIN = 2
 
+// Fall 2026 starts Sept 1 in Boston. Profile counts the user's pods from then.
+val SEMESTER_START: Instant = LocalDateTime.of(2026, 9, 1, 0, 0).atZone(ZoneId.of("America/New_York")).toInstant()
+
 // Groups last the semester. After the end of Dec 19, 2026 in Boston they're read-only.
 val SEMESTER_END: Instant = LocalDateTime.of(2026, 12, 20, 0, 0).atZone(ZoneId.of("America/New_York")).toInstant()
 
