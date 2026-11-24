@@ -282,6 +282,23 @@
     <string name="profile_error_not_bu">That isn\'t a BU account. Sign in with your full @bu.edu email.</string>
     <string name="profile_error_no_bu_account">No BU account on this device yet. Add it with your full BU email (name@bu.edu), then try again.</string>
     <string name="profile_blocked_heading">Blocked</string>
+    <string name="profile_next_up">Next up</string>
+    <string name="profile_preferences">Preferences</string>
+    <string name="profile_safety">Safety</string>
+    <string name="profile_appearance">Appearance</string>
+    <string name="appearance_system">Follow phone</string>
+    <string name="appearance_light">Light</string>
+    <string name="appearance_dark">Dark</string>
+    <string name="profile_stat_pods">Pods</string>
+    <string name="profile_stat_hours">Hours</string>
+    <string name="profile_stat_groups">Groups</string>
+    <string name="profile_record_summary">This semester: %1$d pods, %2$s hours, %3$d groups</string>
+    <plurals name="profile_hosted">
+        <item quantity="one">%d of them you hosted</item>
+        <item quantity="other">%d of them you hosted</item>
+    </plurals>
+    <string name="profile_why_bu">Why BU only</string>
+    <string name="profile_why_verified">Everyone you meet signed in with a verified BU email.</string>
     <string name="blocked_title">Blocked people</string>
     <string name="blocked_empty">You haven\'t blocked anyone.</string>
     <string name="safety_title">Meeting safely</string>

@@ -93,7 +93,13 @@ fun ReconveneApp() {
                     onOpenGroup = { groupId -> navController.navigate(GroupRoute(groupId)) { launchSingleTop = true } },
                 )
             }
-            composable<ProfileRoute> { ProfileScreen() }
+            composable<ProfileRoute> {
+                ProfileScreen(
+                    onOpenPod = { podId -> navController.navigate(PodDetailRoute(podId)) { launchSingleTop = true } },
+                    onOpenBlocked = dropUnlessResumed { navController.navigate(BlockedPeopleRoute) },
+                    onOpenSafety = dropUnlessResumed { navController.navigate(MeetingSafelyRoute) },
+                )
+            }
             composable<CreatePodRoute> {
                 CreatePodScreen(
                     onBack = dropUnlessResumed { navController.popBackStack() },

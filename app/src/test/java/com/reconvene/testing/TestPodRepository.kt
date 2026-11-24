@@ -29,6 +29,9 @@ class TestPodRepository : PodRepository {
         cachedPods.value = refreshResults.receive().getOrThrow()
     }
 
+    // Profile's sync of the user's own pods doesn't wait on the test.
+    override suspend fun refreshMine(uid: String) {}
+
     override suspend fun createPod(pod: Pod) {
         cachedPods.value += pod
     }
