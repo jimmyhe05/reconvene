@@ -4,7 +4,7 @@
   "description": "Tests firebase/firestore.rules on the Firestore emulator.",
   "type": "module",
   "scripts": {
-    "test": "cd .. && firebase emulators:exec --only firestore --project demo-reconvene \"node --test rules-test/*.test.js\""
+    "test": "cd .. && firebase emulators:exec --only firestore --project demo-reconvene \"node --test --test-concurrency=1 rules-test/*.test.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^6.0.0",

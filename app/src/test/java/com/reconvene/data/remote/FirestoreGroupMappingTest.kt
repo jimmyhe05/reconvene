@@ -1,11 +1,17 @@
 package com.reconvene.data.remote
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.reconvene.data.model.Group
+import com.reconvene.data.model.GroupMessage
+import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.SEMESTER_END
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 import java.util.Date
 
 class FirestoreGroupMappingTest {
@@ -70,5 +76,35 @@ class FirestoreGroupMappingTest {
         assertNull(groupFromFirestore("pod-1", data + (GroupFields.MEMBERS to "maya")))
         assertNull(groupFromFirestore("pod-1", data + (GroupFields.HANDOVER to mapOf("uid" to "ben"))))
         assertNull(groupFromFirestore("pod-1", data - GroupFields.ARCHIVES_AT))
+    }
+
+    private val sentAt = Instant.parse("2026-11-24T15:00:00Z")
+
+    private val message = GroupMessage("m1", "pod-1", "ben", "Ben", "Same time next week?", sentAt)
+
+    @Test
+    fun newMessageLeavesItsTimeToTheServer() {
+        val data = message.toNewFirestoreMessage()
+
+        assertEquals(setOf(MessageFields.AUTHOR_UID, MessageFields.AUTHOR_NAME, MessageFields.TEXT, MessageFields.SENT_AT), data.keys)
+        assertEquals("ben", data[MessageFields.AUTHOR_UID])
+        assertTrue(data[MessageFields.SENT_AT] is FieldValue)
+    }
+
+    @Test
+    fun messageReadsAsSentOrStillSending() {
+        val data = message.toNewFirestoreMessage() + (MessageFields.SENT_AT to Timestamp(Date.from(sentAt)))
+
+        assertEquals(message, messageFromFirestore("m1", "pod-1", data, pending = false))
+        assertEquals(message.copy(status = MessageStatus.SENDING), messageFromFirestore("m1", "pod-1", data, pending = true))
+    }
+
+    @Test
+    fun messageMissingAFieldOrItsTimeGivesNull() {
+        val data = message.toNewFirestoreMessage() + (MessageFields.SENT_AT to Date.from(sentAt))
+
+        assertNull(messageFromFirestore("m1", "pod-1", data - MessageFields.TEXT, pending = false))
+        assertNull(messageFromFirestore("m1", "pod-1", data + (MessageFields.AUTHOR_UID to 7), pending = false))
+        assertNull(messageFromFirestore("m1", "pod-1", data + (MessageFields.SENT_AT to null), pending = false))
     }
 }

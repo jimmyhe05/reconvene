@@ -70,6 +70,10 @@ the role to a member, who becomes host when they accept while the old host leave
 the host disbands, which marks the group and keeps it. Nothing changes after a group is disbanded or after
 the semester ends. Nobody can delete a group.
 
+A group's chat is readable by its members only, also after it's disbanded or archived; invited users see
+it once they accept. A member sends a message as themselves, under their name in the group, while the group
+is open. The server stamps its time. Nobody can change or delete a message.
+
 Test the rules on the Firestore emulator before publishing a change. The tests are in `rules-test/` and
 need Node, plus Java 21 or newer for the emulator (Android Studio's bundled JDK works):
 
@@ -111,6 +115,8 @@ key file. Only run it against our own project.
 | Join or leave | A Firestore transaction reads the server's copy, checks capacity and the join cutoff, and adds or removes the user's own entry in `members`. Room changes only after the server agrees. Needs the network: offline, the card shows an error and nothing changes. |
 | Groups tab open | A live listener on groups whose `access` holds the user's uid keeps Room in step. A group the user leaves or declines drops out of the results and out of Room. Offline, the listener answers from Firestore's own cache. |
 | Keep, answer an invite, leave, hand over, disband | A transaction reads the server's copy (for keeping, the pod too), checks it with the rules in `Group.kt`, and writes only the fields that change. Needs the network. |
+| Group screen open | A live listener on the group's latest 300 messages, ordered by the server's time, upserts them into Room. One the server doesn't have yet shows as sending, at the phone's estimate of the time. |
+| Send a message | Saved to Room as sending, then written to Firestore with its own id. A plain write, not a transaction, so it queues offline and lands when the network is back, even after a restart. Refused by the rules (for example after leaving), it shows as failed and can be retried; a retry of one the server already has counts as sent. |
 | Sign out or switch account | Cached groups and chat are deleted from the phone. Pods stay, since every BU student can read them. |
 | Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 
@@ -148,3 +154,12 @@ Collection `groups`, document id = the id of the pod it was kept from.
 | `archivesAt` | timestamp | end of Dec 19, 2026 in Boston; read-only after |
 | `disbanded` | boolean | `false` on create; only the host sets it to `true` |
 | `disbandedAt` | timestamp | set by the server when disbanded |
+
+Subcollection `groups/{groupId}/messages`, document id = message id (a UUID made on the device).
+
+| Field | Type | Notes |
+|---|---|---|
+| `authorUid` | string | the sender, a member when sent |
+| `authorName` | string | the sender's name in the group's `members` |
+| `text` | string | 1 to 500 characters, not just spaces |
+| `sentAt` | timestamp | set by the server |
