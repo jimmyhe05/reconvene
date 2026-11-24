@@ -35,6 +35,7 @@ class PodDetailViewModel(
     private val groupRepository: GroupRepository,
     authRepository: AuthRepository,
     private val clock: Clock,
+    private val walkMinutes: Int? = null,
 ) : ViewModel() {
 
     private val actions = PodActionRunner(podRepository, viewModelScope)
@@ -101,6 +102,8 @@ class PodDetailViewModel(
         }
     }
 
+    fun mapUnavailable() = actions.show(PodMessage.NO_MAPS_APP)
+
     fun messageShown() = actions.messageShown()
 
     // The stored copy shows at once. The refresh catches changes since Discover last loaded, and
@@ -132,7 +135,7 @@ class PodDetailViewModel(
             RefreshStatus.DONE -> PodDetailUiState.Gone()
         }
         pod.canceled -> PodDetailUiState.Gone(canceledByYou = user != null && pod.hostUid == user.uid)
-        else -> PodDetailUiState.Content(pod, clock.instant(), user?.uid, isBusy, keepOption(pod, user, keep))
+        else -> PodDetailUiState.Content(pod, clock.instant(), user?.uid, isBusy, keepOption(pod, user, keep), walkMinutes)
     }
 
     // Only the host, while the pod is running, with someone to invite, and once per pod.
@@ -159,12 +162,14 @@ class PodDetailViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as ReconveneApplication).container
+                val route = createSavedStateHandle().toRoute<PodDetailRoute>()
                 PodDetailViewModel(
-                    podId = createSavedStateHandle().toRoute<PodDetailRoute>().podId,
+                    podId = route.podId,
                     podRepository = container.podRepository,
                     groupRepository = container.groupRepository,
                     authRepository = container.authRepository,
                     clock = container.clock,
+                    walkMinutes = route.walkMinutes,
                 )
             }
         }

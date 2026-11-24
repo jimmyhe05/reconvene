@@ -1,10 +1,13 @@
 package com.reconvene.ui.discover
 
+import android.Manifest
 import android.content.Context
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -13,8 +16,12 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.reconvene.R
 import com.reconvene.data.auth.UnavailableAuthRepository
+import com.reconvene.data.location.GeoPoint
+import com.reconvene.data.location.LocationRepository
+import com.reconvene.data.location.buildingLocations
 import com.reconvene.data.model.Pod
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
@@ -66,12 +73,31 @@ class DiscoverScreenTest {
             pod("chem", "Organic chemistry", now.plus(Duration.ofMinutes(90))),
             pod("calc", "Calculus review", now.plus(Duration.ofHours(4)), full = true),
         )
-        val viewModel = DiscoverViewModel(StaticPodRepository(pods), UnavailableAuthRepository, Clock.fixed(now, zone))
+        val viewModel = DiscoverViewModel(
+            StaticPodRepository(pods),
+            UnavailableAuthRepository,
+            Clock.fixed(now, zone),
+            locationRepository = AtMugar,
+        )
         composeRule.setContent {
             ReconveneTheme {
-                DiscoverScreen(onCreatePod = {}, onSignIn = {}, onOpenPod = { openedPodId = it }, viewModel = viewModel)
+                DiscoverScreen(onCreatePod = {}, onSignIn = {}, onOpenPod = { podId, _ -> openedPodId = podId }, viewModel = viewModel)
             }
         }
+    }
+
+    // The permission is granted up front, as if the user tapped Allow in the system dialog.
+    @Test
+    fun nearestFirstShowsWalkingTimes() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.uiAutomation.grantRuntimePermission(instrumentation.targetContext.packageName, Manifest.permission.ACCESS_FINE_LOCATION)
+
+        composeRule.onNodeWithText(context.getString(R.string.nearby_chip)).performClick()
+
+        val place = context.getString(R.string.pod_place, "Mugar Library", "2nd floor")
+        // All three pods are in Mugar, so every card shows the walk.
+        composeRule.onAllNodesWithText(context.getString(R.string.pod_place_walk, place, 1), useUnmergedTree = true)
+            .assertCountEquals(3)
     }
 
     @Test
@@ -135,4 +161,8 @@ private class StaticPodRepository(private val pods: List<Pod>) : PodRepository {
     override suspend fun leavePod(podId: String, uid: String) = Unit
 
     override suspend fun cancelPod(podId: String, uid: String) = Unit
+}
+
+private object AtMugar : LocationRepository {
+    override suspend fun currentLocation(): GeoPoint = buildingLocations.getValue("Mugar Library")
 }

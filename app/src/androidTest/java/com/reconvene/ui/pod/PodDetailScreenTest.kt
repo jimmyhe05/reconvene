@@ -98,6 +98,19 @@ class PodDetailScreenTest {
     }
 
     @Test
+    fun whereShowsTheWalkAndOffersToOpenMaps() {
+        composeRule.setContent {
+            ReconveneTheme {
+                PodDetailContent(uiState = PodDetailUiState.Content(pod(host = maya), now, viewerUid = null, walkMinutes = 4), onBack = {})
+            }
+        }
+        val place = context.getString(R.string.pod_place, "Mugar Library", "2nd floor")
+
+        composeRule.onNodeWithText(context.getString(R.string.pod_place_walk, place, 4), useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.pod_detail_open_maps)).assertIsDisplayed()
+    }
+
+    @Test
     fun showsWhoIsGoingAndJoiningAddsYou() {
         showDetail(pod(host = maya))
 

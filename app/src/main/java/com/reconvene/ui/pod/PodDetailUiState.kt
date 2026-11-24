@@ -20,6 +20,7 @@ sealed interface PodDetailUiState {
         val viewerUid: String?,
         val isBusy: Boolean = false,
         val keep: KeepOption = KeepOption.HIDDEN,
+        val walkMinutes: Int? = null,
     ) : PodDetailUiState
 }
 
