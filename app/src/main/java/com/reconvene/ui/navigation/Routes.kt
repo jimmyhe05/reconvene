@@ -16,3 +16,6 @@ data object CreatePodRoute
 
 @Serializable
 data class PodDetailRoute(val podId: String)
+
+@Serializable
+data class GroupRoute(val groupId: String)

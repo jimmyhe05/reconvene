@@ -107,6 +107,19 @@
     <string name="groups_host">Host</string>
     <string name="groups_private_note">Groups are private to their members and become read-only on %1$s.</string>
 
+    <string name="group_reported">Thanks. The message was reported, and its author won\'t know who reported it.</string>
+    <string name="group_blocked">Blocked. You won\'t see their messages.</string>
+    <string name="group_proposed">Proposed. Your group can vote now.</string>
+    <string name="group_scheduled">Session scheduled. It\'s on Discover now.</string>
+    <string name="group_error_gone">This group is no longer available.</string>
+    <string name="group_error_read_only">This group is read-only now.</string>
+    <string name="group_error_not_host">Only the host can do that.</string>
+    <string name="group_error_not_member">You\'re not in this group anymore.</string>
+    <string name="group_error_no_proposal">There\'s no proposed session right now.</string>
+    <string name="group_error_bad_proposal">That session can\'t happen anymore. Propose a new time.</string>
+    <string name="group_error_not_enough_yes">Not enough people can come yet.</string>
+    <string name="group_error_bad_message">That message can\'t be sent.</string>
+
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>
     <string name="pod_detail_loading">Loading pod</string>
