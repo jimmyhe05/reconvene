@@ -14,6 +14,7 @@ import com.reconvene.R
 import com.reconvene.data.auth.SignedInUser
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.settings.Appearance
+import com.reconvene.data.settings.ReminderLead
 import com.reconvene.ui.theme.ReconveneTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -96,6 +97,28 @@ class ProfileContentTest {
         composeRule.onNodeWithText(string(R.string.profile_appearance)).performScrollTo().performClick()
         composeRule.onNodeWithText(string(R.string.appearance_dark)).performClick()
         assertEquals(Appearance.DARK, appearance)
+    }
+
+    @Test
+    fun remindersShowTheirLeadAndAskWhenChanged() {
+        var chosen: ReminderLead? = null
+        composeRule.setContent {
+            ReconveneTheme {
+                ProfileContent(
+                    uiState = ProfileUiState(isAvailable = true, user = terrier, reminderLead = ReminderLead.MINUTES_15),
+                    onSignIn = {},
+                    onSignOut = {},
+                    remindersBlocked = true,
+                    actions = ProfileActions(onReminderChange = { chosen = it }),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.reminder_15)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.profile_reminders_blocked)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.profile_reminders)).performScrollTo().performClick()
+        composeRule.onNodeWithText(string(R.string.reminder_60)).performClick()
+        assertEquals(ReminderLead.HOUR_1, chosen)
     }
 
     @Test

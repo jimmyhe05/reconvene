@@ -15,6 +15,7 @@ import com.reconvene.testing.MainDispatcherRule
 import com.reconvene.testing.TestPodRepository
 import com.reconvene.testing.testPod
 import com.reconvene.data.settings.Appearance
+import com.reconvene.data.settings.ReminderLead
 import com.reconvene.data.settings.SettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -156,6 +157,17 @@ class ProfileViewModelTest {
     }
 
     @Test
+    fun choosingAReminderSavesIt() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+        assertEquals(ReminderLead.OFF, viewModel.uiState.value.reminderLead)
+
+        viewModel.setReminderLead(ReminderLead.MINUTES_30)
+
+        assertEquals(ReminderLead.MINUTES_30, viewModel.uiState.value.reminderLead)
+    }
+
+    @Test
     fun choosingAnAppearanceSavesIt() = runTest {
         val viewModel = viewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
@@ -168,9 +180,14 @@ class ProfileViewModelTest {
 
     private class InMemorySettings : SettingsRepository {
         override val appearance = MutableStateFlow(Appearance.SYSTEM)
+        override val reminderLead = MutableStateFlow(ReminderLead.OFF)
 
         override suspend fun setAppearance(appearance: Appearance) {
             this.appearance.value = appearance
+        }
+
+        override suspend fun setReminderLead(lead: ReminderLead) {
+            reminderLead.value = lead
         }
     }
 

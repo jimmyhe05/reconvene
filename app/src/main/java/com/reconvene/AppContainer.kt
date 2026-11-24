@@ -12,6 +12,9 @@ import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.local.ReconveneDatabase
 import com.reconvene.data.location.DeviceLocationRepository
 import com.reconvene.data.location.LocationRepository
+import com.reconvene.data.reminders.ReminderScheduler
+import com.reconvene.data.reminders.WorkManagerReminderScheduler
+import com.reconvene.data.reminders.remindersFor
 import com.reconvene.data.remote.FakeGroupRemoteDataSource
 import com.reconvene.data.remote.FakePodRemoteDataSource
 import com.reconvene.data.remote.FirestoreGroupRemoteDataSource
@@ -29,6 +32,8 @@ import com.reconvene.data.settings.settingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.Clock
@@ -64,6 +69,8 @@ class AppContainer(context: Context) {
 
     val settingsRepository: SettingsRepository = DataStoreSettingsRepository(context.applicationContext.settingsDataStore)
 
+    private val reminderScheduler: ReminderScheduler = WorkManagerReminderScheduler(context.applicationContext, clock)
+
     val authRepository: AuthRepository =
         firebaseApp?.let { FirebaseAuthRepository(FirebaseAuth.getInstance(it)) } ?: UnavailableAuthRepository
 
@@ -75,6 +82,17 @@ class AppContainer(context: Context) {
         // student and stay cached.
         appScope.launch {
             clearWhenUserChanges(authRepository.currentUser.map { it?.uid }) { groupRepository.clear() }
+        }
+        // Keeps a reminder waiting for each pod the user is going to, while reminders are on. Joining,
+        // leaving, a cancellation, signing out or changing the setting reschedules them.
+        appScope.launch {
+            combine(
+                authRepository.currentUser.map { it?.uid },
+                podRepository.observePods(),
+                settingsRepository.reminderLead,
+            ) { uid, pods, lead -> remindersFor(pods, uid, lead, clock.instant()) }
+                .distinctUntilChanged()
+                .collect { reminderScheduler.replaceAll(it) }
         }
     }
 

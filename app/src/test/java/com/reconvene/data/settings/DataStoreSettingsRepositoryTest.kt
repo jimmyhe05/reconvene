@@ -38,4 +38,14 @@ class DataStoreSettingsRepositoryTest {
 
         assertEquals(Appearance.SYSTEM, DataStoreSettingsRepository(store).appearance.first())
     }
+
+    @Test
+    fun remindersAreOffUntilChosen() = runTest(UnconfinedTestDispatcher()) {
+        val settings = DataStoreSettingsRepository(store())
+        assertEquals(ReminderLead.OFF, settings.reminderLead.first())
+
+        settings.setReminderLead(ReminderLead.MINUTES_30)
+        assertEquals(ReminderLead.MINUTES_30, settings.reminderLead.first())
+        assertEquals(Appearance.SYSTEM, settings.appearance.first())
+    }
 }
