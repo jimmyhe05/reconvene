@@ -75,7 +75,9 @@ fun ReconveneApp() {
                     onCreatePod = dropUnlessResumed { navController.navigate(CreatePodRoute) },
                     onSignIn = { navController.navigateToTab(TopLevelDestination.PROFILE) },
                     // Single top, so a quick double tap opens the pod once.
-                    onOpenPod = { podId -> navController.navigate(PodDetailRoute(podId)) { launchSingleTop = true } },
+                    onOpenPod = { podId, walkMinutes ->
+                        navController.navigate(PodDetailRoute(podId, walkMinutes)) { launchSingleTop = true }
+                    },
                 )
             }
             composable<GroupsRoute> {

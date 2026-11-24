@@ -2,6 +2,7 @@ package com.reconvene.data.local
 
 import androidx.room.TypeConverter
 import com.reconvene.data.model.PodMember
+import com.reconvene.data.model.PodMode
 import kotlinx.serialization.json.Json
 import java.time.Instant
 
@@ -23,4 +24,12 @@ class Converters {
 
     @TypeConverter
     fun jsonToStrings(value: String): List<String> = Json.decodeFromString(value)
+
+    @TypeConverter
+    fun modeToName(value: PodMode): String = value.name
+
+    // Room's own enum converter throws on a name it doesn't know, and rows saved before the vibes
+    // were merged can say COORDINATE.
+    @TypeConverter
+    fun nameToMode(value: String): PodMode = PodMode.fromStored(value) ?: PodMode.QUIET
 }

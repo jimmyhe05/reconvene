@@ -1,5 +1,10 @@
 package com.reconvene.ui.discover
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +58,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
@@ -70,7 +77,7 @@ import java.time.ZoneId
 fun DiscoverScreen(
     onCreatePod: () -> Unit,
     onSignIn: () -> Unit,
-    onOpenPod: (podId: String) -> Unit,
+    onOpenPod: (podId: String, walkMinutes: Int?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(factory = DiscoverViewModel.Factory),
 ) {
@@ -81,18 +88,31 @@ fun DiscoverScreen(
     LaunchedEffect(search) {
         snapshotFlow { search.text.toString() }.collect { query -> viewModel.updateFilter { it.copy(query = query) } }
     }
+    // Location is asked for here, the moment someone taps Nearest first, never at startup.
+    val context = LocalContext.current
+    val askForLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        if (grants.values.any { it }) viewModel.findNearby() else viewModel.locationDenied()
+    }
+    val nearby = (uiState as? DiscoverUiState.Content)?.nearby ?: Nearby.OFF
     DiscoverContent(
         uiState = uiState,
         actions = PodListActions(
             onRetry = viewModel::retry,
             onCreatePod = onCreatePod,
             onSignIn = onSignIn,
-            onOpenPod = onOpenPod,
+            onOpenPod = { podId -> onOpenPod(podId, (uiState as? DiscoverUiState.Content)?.walkMinutes?.get(podId)) },
             onJoin = viewModel::join,
             onLeave = viewModel::leave,
             onCancel = viewModel::cancel,
             onFilterChange = viewModel::updateFilter,
             onClearFilter = viewModel::clearFilter,
+            onNearestFirst = {
+                when {
+                    nearby != Nearby.OFF -> viewModel.stopNearby()
+                    hasLocationPermission(context) -> viewModel.findNearby()
+                    else -> askForLocation.launch(LOCATION_PERMISSIONS)
+                }
+            },
         ),
         search = search,
         message = message,
@@ -111,7 +131,16 @@ data class PodListActions(
     val onCancel: (podId: String) -> Unit = {},
     val onFilterChange: (change: (PodFilter) -> PodFilter) -> Unit = {},
     val onClearFilter: () -> Unit = {},
+    val onNearestFirst: () -> Unit = {},
 )
+
+// Fine for walking times between buildings; the system dialog still lets people share only an
+// approximate location.
+private val LOCATION_PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+
+private fun hasLocationPermission(context: Context): Boolean = LOCATION_PERMISSIONS.any {
+    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+}
 
 @Composable
 fun DiscoverContent(
@@ -222,7 +251,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
             }
             is DiscoverUiState.Content -> {
                 item(key = "search") { SearchField(search) }
-                item(key = "filters") { FilterChips(uiState.filter, actions.onFilterChange) }
+                item(key = "filters") { FilterChips(uiState.filter, actions.onFilterChange, uiState.nearby, actions.onNearestFirst) }
                 if (uiState.filter.isActive && uiState.podCount > 0) {
                     item(key = "match-count") { MatchCount(uiState.podCount) }
                 }
@@ -258,6 +287,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
                             onLeave = { actions.onLeave(pod.id) },
                             onCancel = { actions.onCancel(pod.id) },
                             onOpen = { actions.onOpenPod(pod.id) },
+                            walkMinutes = uiState.walkMinutes[pod.id],
                         )
                     }
                 }
@@ -296,7 +326,12 @@ private fun SearchField(state: TextFieldState) {
 // Each chip flips its own part of the newest filter, so quick taps can't undo each other.
 // The chips wrap onto more lines instead of scrolling sideways, so none are hidden off screen.
 @Composable
-private fun FilterChips(filter: PodFilter, onFilterChange: ((PodFilter) -> PodFilter) -> Unit) {
+private fun FilterChips(
+    filter: PodFilter,
+    onFilterChange: ((PodFilter) -> PodFilter) -> Unit,
+    nearby: Nearby,
+    onNearestFirst: () -> Unit,
+) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterToggle(stringResource(R.string.discover_filter_open_spots), filter.openSpots) {
             onFilterChange { it.copy(openSpots = !it.openSpots) }
@@ -312,6 +347,11 @@ private fun FilterChips(filter: PodFilter, onFilterChange: ((PodFilter) -> PodFi
                 onFilterChange { it.withMode(mode, on = mode !in it.modes) }
             }
         }
+        FilterToggle(
+            label = stringResource(if (nearby == Nearby.LOCATING) R.string.nearby_locating else R.string.nearby_chip),
+            selected = nearby != Nearby.OFF,
+            onClick = onNearestFirst,
+        )
     }
 }
 

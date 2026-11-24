@@ -1,5 +1,8 @@
 package com.reconvene.ui.pod
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -35,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -49,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
 import com.reconvene.data.model.Pod
+import com.reconvene.data.location.mapLink
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.remote.samplePods
 import com.reconvene.ui.components.EmptyState
@@ -70,6 +76,7 @@ fun PodDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     PodDetailContent(
         uiState = uiState,
         onBack = onBack,
@@ -78,6 +85,13 @@ fun PodDetailScreen(
         onLeave = viewModel::leave,
         onCancel = viewModel::cancel,
         onKeep = viewModel::keep,
+        onOpenMaps = { pod ->
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pod.mapLink())))
+            } catch (e: ActivityNotFoundException) {
+                viewModel.mapUnavailable()
+            }
+        },
         message = message,
         onMessageShown = viewModel::messageShown,
         modifier = modifier,
@@ -95,6 +109,7 @@ fun PodDetailContent(
     onLeave: () -> Unit = {},
     onCancel: () -> Unit = {},
     onKeep: (name: String) -> Unit = {},
+    onOpenMaps: (Pod) -> Unit = {},
     message: PodMessage? = null,
     onMessageShown: () -> Unit = {},
 ) {
@@ -146,7 +161,7 @@ fun PodDetailContent(
                         },
                     )
                 }
-                is PodDetailUiState.Content -> PodDetails(uiState, onJoin, onLeave, onCancel, onKeep)
+                is PodDetailUiState.Content -> PodDetails(uiState, onJoin, onLeave, onCancel, onKeep) { onOpenMaps(uiState.pod) }
             }
             SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
         }
@@ -182,6 +197,7 @@ private fun PodDetails(
     onLeave: () -> Unit,
     onCancel: () -> Unit,
     onKeep: (name: String) -> Unit,
+    onOpenMaps: () -> Unit,
 ) {
     val pod = uiState.pod
     Column(Modifier.fillMaxSize()) {
@@ -206,7 +222,24 @@ private fun PodDetails(
             }
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Detail(stringResource(R.string.pod_detail_when), podTimeText(pod, uiState.now))
-                Detail(stringResource(R.string.pod_detail_where), stringResource(R.string.pod_place, pod.building, pod.meetingPoint))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val place = stringResource(R.string.pod_place, pod.building, pod.meetingPoint)
+                    Detail(
+                        label = stringResource(R.string.pod_detail_where),
+                        value = uiState.walkMinutes?.let { stringResource(R.string.pod_place_walk, place, it) } ?: place,
+                    )
+                    OutlinedButton(onClick = onOpenMaps) {
+                        Icon(
+                            painterResource(R.drawable.ic_pin),
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize),
+                        )
+                        Text(
+                            text = stringResource(R.string.pod_detail_open_maps),
+                            modifier = Modifier.padding(start = ButtonDefaults.IconSpacing),
+                        )
+                    }
+                }
                 Detail(
                     label = stringResource(R.string.pod_detail_vibe),
                     value = stringResource(pod.mode.labelRes),

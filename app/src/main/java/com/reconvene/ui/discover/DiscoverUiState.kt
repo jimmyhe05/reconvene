@@ -23,11 +23,17 @@ sealed interface DiscoverUiState {
         // Pods with a join or leave waiting for the server.
         val busyPodIds: Set<String> = emptySet(),
         val filter: PodFilter = PodFilter(),
+        // Walking minutes by pod id, once the user turned on Nearest first. Pods in a building we
+        // don't know the location of have no entry.
+        val walkMinutes: Map<String, Int> = emptyMap(),
+        val nearby: Nearby = Nearby.OFF,
     ) : DiscoverUiState {
         val podCount: Int
             get() = sections.sumOf { it.pods.size }
     }
 }
+
+enum class Nearby { OFF, LOCATING, ON }
 
 data class PodSection(val heading: SectionHeading, val pods: List<Pod>)
 

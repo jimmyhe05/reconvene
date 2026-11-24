@@ -10,6 +10,8 @@ import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.FirebaseAuthRepository
 import com.reconvene.data.auth.UnavailableAuthRepository
 import com.reconvene.data.local.ReconveneDatabase
+import com.reconvene.data.location.DeviceLocationRepository
+import com.reconvene.data.location.LocationRepository
 import com.reconvene.data.remote.FakeGroupRemoteDataSource
 import com.reconvene.data.remote.FakePodRemoteDataSource
 import com.reconvene.data.remote.FirestoreGroupRemoteDataSource
@@ -54,6 +56,8 @@ class AppContainer(context: Context) {
         remote = groupRemoteDataSource(),
         clock = clock,
     )
+
+    val locationRepository: LocationRepository = DeviceLocationRepository(context)
 
     val authRepository: AuthRepository =
         firebaseApp?.let { FirebaseAuthRepository(FirebaseAuth.getInstance(it)) } ?: UnavailableAuthRepository

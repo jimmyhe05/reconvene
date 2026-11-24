@@ -15,7 +15,8 @@ data object ProfileRoute
 data object CreatePodRoute
 
 @Serializable
-data class PodDetailRoute(val podId: String)
+// walkMinutes comes from Discover's Nearest first. Only the minutes travel, never the user's position.
+data class PodDetailRoute(val podId: String, val walkMinutes: Int? = null)
 
 @Serializable
 data class GroupRoute(val groupId: String)
