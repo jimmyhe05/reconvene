@@ -138,6 +138,20 @@
     <string name="group_chat_empty">No messages yet. Say hello to your group.</string>
     <string name="group_chat_sync_failed">Couldn\'t load new messages.</string>
     <string name="group_read_only">The semester has ended, so this group is read-only. You can still read the chat.</string>
+    <string name="group_message_options">More options for %1$s\'s message</string>
+    <string name="group_report">Report message</string>
+    <string name="group_block_name">Block %1$s</string>
+    <string name="group_report_title">Report this message?</string>
+    <string name="group_report_body">Pick the closest reason. %1$s won\'t know who reported it.</string>
+    <string name="group_report_confirm">Report</string>
+    <string name="group_reason_harassment">Harassment or bullying</string>
+    <string name="group_reason_spam">Spam</string>
+    <string name="group_reason_academic_dishonesty">Academic dishonesty</string>
+    <string name="group_reason_unsafe_meetup">Unsafe meetup</string>
+    <string name="group_reason_other">Something else</string>
+    <string name="group_block_title">Block %1$s?</string>
+    <string name="group_block_body">You won\'t see their messages anymore. They won\'t be told.</string>
+    <string name="group_block_confirm">Block</string>
 
     <string name="pod_detail_open">Open pod details</string>
     <string name="pod_detail_title">Pod details</string>

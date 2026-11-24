@@ -56,6 +56,7 @@ import com.reconvene.data.auth.LOCAL_USER
 import com.reconvene.data.model.GroupMessage
 import com.reconvene.data.model.MESSAGE_MAX
 import com.reconvene.data.model.MessageStatus
+import com.reconvene.data.model.ReportReason
 import com.reconvene.data.remote.sampleGroups
 import com.reconvene.ui.components.EmptyState
 import com.reconvene.ui.discover.dayLabel
@@ -86,6 +87,8 @@ fun GroupScreen(
         onRetrySync = viewModel::retrySync,
         onSend = viewModel::send,
         onRetryMessage = viewModel::retry,
+        onReport = viewModel::report,
+        onBlock = viewModel::block,
         notice = notice,
         onNoticeShown = viewModel::noticeShown,
         modifier = modifier,
@@ -101,6 +104,8 @@ fun GroupContent(
     onRetrySync: () -> Unit = {},
     onSend: (String) -> Unit = {},
     onRetryMessage: (messageId: String) -> Unit = {},
+    onReport: (messageId: String, ReportReason) -> Unit = { _, _ -> },
+    onBlock: (uid: String) -> Unit = {},
     notice: GroupNotice? = null,
     onNoticeShown: () -> Unit = {},
 ) {
@@ -150,7 +155,7 @@ fun GroupContent(
                         action = { BackToGroups(onBack) },
                     )
                 }
-                is GroupUiState.Content -> Chat(uiState, onRetrySync, onSend, onRetryMessage)
+                is GroupUiState.Content -> Chat(uiState, onRetrySync, onSend, onRetryMessage, onReport, onBlock)
             }
             SnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp))
         }
@@ -191,7 +196,12 @@ private fun Chat(
     onRetrySync: () -> Unit,
     onSend: (String) -> Unit,
     onRetryMessage: (messageId: String) -> Unit,
+    onReport: (messageId: String, ReportReason) -> Unit,
+    onBlock: (uid: String) -> Unit,
 ) {
+    // The message being reported or whose author is being blocked, by id, so it survives rotation.
+    var reportingId by rememberSaveable { mutableStateOf<String?>(null) }
+    var blockingId by rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         if (uiState.chatSyncFailed) SyncFailedBanner(onRetrySync)
         if (uiState.messages.isEmpty()) {
@@ -223,11 +233,33 @@ private fun Chat(
                         isMine = message.authorUid == uiState.viewerUid,
                         now = uiState.now,
                         onRetry = { onRetryMessage(message.id) },
+                        onReport = { reportingId = message.id },
+                        onBlock = { blockingId = message.id },
                     )
                 }
             }
         }
         if (uiState.isReadOnly) ReadOnlyBanner() else Composer(onSend)
+    }
+    uiState.messages.firstOrNull { it.id == reportingId }?.let { message ->
+        ReportDialog(
+            authorName = message.authorName,
+            onReport = { reason ->
+                onReport(message.id, reason)
+                reportingId = null
+            },
+            onDismiss = { reportingId = null },
+        )
+    }
+    uiState.messages.firstOrNull { it.id == blockingId }?.let { message ->
+        BlockDialog(
+            authorName = message.authorName,
+            onBlock = {
+                onBlock(message.authorUid)
+                blockingId = null
+            },
+            onDismiss = { blockingId = null },
+        )
     }
 }
 
@@ -252,9 +284,17 @@ private fun SyncFailedBanner(onRetry: () -> Unit) {
     }
 }
 
-// The bubble, author, time and status are read as one item. Retry sits outside it as its own button.
+// The bubble, author, time and status are read as one item. Retry and the menu for other people's
+// messages sit outside it as their own buttons.
 @Composable
-private fun MessageRow(message: GroupMessage, isMine: Boolean, now: Instant, onRetry: () -> Unit) {
+private fun MessageRow(
+    message: GroupMessage,
+    isMine: Boolean,
+    now: Instant,
+    onRetry: () -> Unit,
+    onReport: () -> Unit,
+    onBlock: () -> Unit,
+) {
     val author = if (isMine) stringResource(R.string.group_you) else message.authorName
     val status = when (message.status) {
         MessageStatus.SENDING -> stringResource(R.string.group_sending)
@@ -267,7 +307,7 @@ private fun MessageRow(message: GroupMessage, isMine: Boolean, now: Instant, onR
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = if (isMine) 48.dp else 0.dp, end = if (isMine) 0.dp else 48.dp),
+            .padding(start = if (isMine) 48.dp else 0.dp),
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
     ) {
         Column(Modifier.weight(1f, fill = false), horizontalAlignment = alignment) {
@@ -312,6 +352,7 @@ private fun MessageRow(message: GroupMessage, isMine: Boolean, now: Instant, onR
                 }
             }
         }
+        if (!isMine) MessageMenu(message.authorName, onReport, onBlock)
     }
 }
 
