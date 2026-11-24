@@ -57,7 +57,7 @@ class GroupsScreenTest {
         val viewModel = GroupsViewModel(repository, UnavailableAuthRepository)
         composeRule.setContent {
             ReconveneTheme {
-                GroupsScreen(onSignIn = {}, viewModel = viewModel)
+                GroupsScreen(onSignIn = {}, onOpenGroup = {}, viewModel = viewModel)
             }
         }
         val invites = context.getString(R.string.groups_invites)

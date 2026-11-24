@@ -1,6 +1,7 @@
 package com.reconvene.ui.groups
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -55,6 +57,7 @@ import java.time.format.FormatStyle
 @Composable
 fun GroupsScreen(
     onSignIn: () -> Unit,
+    onOpenGroup: (groupId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: GroupsViewModel = viewModel(factory = GroupsViewModel.Factory),
 ) {
@@ -63,6 +66,7 @@ fun GroupsScreen(
     GroupsContent(
         uiState = uiState,
         onSignIn = onSignIn,
+        onOpenGroup = onOpenGroup,
         onRetry = viewModel::retry,
         onAccept = viewModel::accept,
         onDecline = viewModel::decline,
@@ -77,6 +81,7 @@ fun GroupsContent(
     uiState: GroupsUiState,
     modifier: Modifier = Modifier,
     onSignIn: () -> Unit = {},
+    onOpenGroup: (groupId: String) -> Unit = {},
     onRetry: () -> Unit = {},
     onAccept: (groupId: String) -> Unit = {},
     onDecline: (groupId: String) -> Unit = {},
@@ -154,7 +159,11 @@ fun GroupsContent(
                     if (uiState.groups.isNotEmpty()) {
                         item(key = "groups-title") { SectionTitle(stringResource(R.string.groups_yours)) }
                         items(uiState.groups, key = { "group-${it.id}" }) { group ->
-                            GroupCard(group, isHost = group.hostUid == uiState.viewerUid)
+                            GroupCard(
+                                group = group,
+                                isHost = group.hostUid == uiState.viewerUid,
+                                onOpen = { onOpenGroup(group.id) },
+                            )
                         }
                     }
                     item(key = "private-note") { PrivateNote(uiState.groups.firstOrNull()?.archivesAt ?: SEMESTER_END) }
@@ -226,9 +235,16 @@ private fun InviteCard(group: Group, isBusy: Boolean, onAccept: () -> Unit, onDe
     }
 }
 
+// Tapping anywhere on the card opens the group. Invites can't be opened until they're accepted.
 @Composable
-private fun GroupCard(group: Group, isHost: Boolean) {
-    GroupSurface(Modifier.semantics(mergeDescendants = true) {}) {
+private fun GroupCard(group: Group, isHost: Boolean, onOpen: () -> Unit) {
+    val openLabel = stringResource(R.string.group_open)
+    GroupSurface(
+        Modifier
+            .clip(MaterialTheme.shapes.large)
+            .clickable(onClickLabel = openLabel, onClick = onOpen)
+            .semantics(mergeDescendants = true) {},
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 group.course?.let { Tag(it) }

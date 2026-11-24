@@ -300,7 +300,7 @@ private fun FormTextField(
 // A menu of suggested buildings, plus "Other building", which opens a text field for any other name.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BuildingField(
+internal fun BuildingField(
     form: CreatePodForm,
     hasError: Boolean,
     onFormChange: (CreatePodForm) -> Unit,
@@ -371,7 +371,7 @@ private fun BuildingField(
 
 // The meeting point text field, with the chosen building's common spots as one-tap chips under it.
 @Composable
-private fun MeetingPointField(
+internal fun MeetingPointField(
     form: CreatePodForm,
     error: String?,
     onFormChange: (CreatePodForm) -> Unit,
@@ -402,7 +402,7 @@ private fun MeetingPointField(
 }
 
 @Composable
-private fun FieldGroup(
+internal fun FieldGroup(
     label: String,
     modifier: Modifier = Modifier,
     hint: String? = null,
@@ -439,7 +439,7 @@ private fun FieldLabel(text: String) {
 
 // A wrapping row of chips where one can be selected. trailing adds extra chips after the options.
 @Composable
-private fun <T> ChoiceRow(
+internal fun <T> ChoiceRow(
     options: List<T>,
     selected: T?,
     label: @Composable (T) -> String,
@@ -467,7 +467,7 @@ private fun <T> ChoiceRow(
 }
 
 @Composable
-private fun WhenFields(
+internal fun WhenFields(
     form: CreatePodForm,
     today: LocalDate,
     startSlots: List<LocalTime>,
@@ -686,7 +686,7 @@ private fun durationText(minutes: Long): String {
 }
 
 @Composable
-private fun FormError.message(): String = when (this) {
+internal fun FormError.message(): String = when (this) {
     FormError.TOPIC_TOO_SHORT -> stringResource(R.string.error_topic_too_short, TOPIC_MIN)
     FormError.BUILDING_MISSING -> stringResource(R.string.error_building_missing)
     FormError.MEETING_POINT_TOO_SHORT -> stringResource(R.string.error_meeting_point_too_short)
