@@ -6,6 +6,8 @@ import com.reconvene.data.model.Group
 import com.reconvene.data.model.GroupMessage
 import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.PodMember
+import com.reconvene.data.model.PodMode
+import com.reconvene.data.model.SessionProposal
 import java.time.Instant
 import java.util.Date
 
@@ -35,11 +37,32 @@ object GroupFields {
     const val HANDOVER_UID = "uid"
     const val HANDOVER_NAME = "name"
 
+    // The next session someone suggested, or null. Groups kept before proposals reached Firestore
+    // don't have the field.
+    const val PROPOSAL = "proposal"
+
     const val ARCHIVES_AT = "archivesAt"
     const val DISBANDED = "disbanded"
 
     // Set by the server when the group is disbanded.
     const val DISBANDED_AT = "disbandedAt"
+}
+
+// Field names inside a group's proposal map.
+object ProposalFields {
+    // Also the id of the pod it becomes.
+    const val ID = "id"
+    const val STARTS_AT = "startsAt"
+    const val ENDS_AT = "endsAt"
+    const val BUILDING = "building"
+    const val MEETING_POINT = "meetingPoint"
+    const val MODE = "mode"
+    const val BY_UID = "byUid"
+
+    // Uid to name of everyone who can come, and uid to true of everyone who can't, so a vote changes
+    // one key that the rules can check.
+    const val YES = "yes"
+    const val NO = "no"
 }
 
 // Every field a change can touch. A new group adds KEPT_BY_UID; disbanding adds DISBANDED_AT.
@@ -55,14 +78,27 @@ fun Group.toFirestore(): Map<String, Any?> = mapOf(
     GroupFields.HANDOVER to hostHandover?.let {
         mapOf(GroupFields.HANDOVER_UID to it.uid, GroupFields.HANDOVER_NAME to it.name)
     },
+    GroupFields.PROPOSAL to proposal?.toFirestore(),
     GroupFields.ARCHIVES_AT to Date.from(archivesAt),
     GroupFields.DISBANDED to disbanded,
+)
+
+private fun SessionProposal.toFirestore(): Map<String, Any> = mapOf(
+    ProposalFields.ID to id,
+    ProposalFields.STARTS_AT to Date.from(startsAt),
+    ProposalFields.ENDS_AT to Date.from(endsAt),
+    ProposalFields.BUILDING to building,
+    ProposalFields.MEETING_POINT to meetingPoint,
+    ProposalFields.MODE to mode.name,
+    ProposalFields.BY_UID to byUid,
+    ProposalFields.YES to yes.associate { it.uid to it.name },
+    ProposalFields.NO to no.associateWith { true },
 )
 
 fun Group.toNewFirestoreGroup(): Map<String, Any?> = toFirestore() + (GroupFields.KEPT_BY_UID to hostUid)
 
 // Returns null for a document that is missing a field or has the wrong type, so one bad group is
-// skipped instead of breaking the list. Proposals come in a later change; until then none is read.
+// skipped instead of breaking the list.
 fun groupFromFirestore(id: String, data: Map<String, Any?>): Group? {
     val hostUid = data[GroupFields.HOST_UID] as? String ?: return null
     val members = membersOf(data[GroupFields.MEMBERS])
@@ -78,6 +114,11 @@ fun groupFromFirestore(id: String, data: Map<String, Any?>): Group? {
         }
         else -> return null
     }
+    val proposal = when (val value = data[GroupFields.PROPOSAL]) {
+        null -> null
+        is Map<*, *> -> proposalFromFirestore(value) ?: return null
+        else -> return null
+    }
     return Group(
         id = id,
         name = data[GroupFields.NAME] as? String ?: return null,
@@ -87,10 +128,23 @@ fun groupFromFirestore(id: String, data: Map<String, Any?>): Group? {
         members = members,
         invited = membersOf(data[GroupFields.INVITED])?.sortedBy { it.name } ?: return null,
         hostHandover = handover,
+        proposal = proposal,
         archivesAt = instantOf(data[GroupFields.ARCHIVES_AT]) ?: return null,
         disbanded = data[GroupFields.DISBANDED] as? Boolean ?: return null,
     )
 }
+
+private fun proposalFromFirestore(data: Map<*, *>): SessionProposal? = SessionProposal(
+    id = data[ProposalFields.ID] as? String ?: return null,
+    startsAt = instantOf(data[ProposalFields.STARTS_AT]) ?: return null,
+    endsAt = instantOf(data[ProposalFields.ENDS_AT]) ?: return null,
+    building = data[ProposalFields.BUILDING] as? String ?: return null,
+    meetingPoint = data[ProposalFields.MEETING_POINT] as? String ?: return null,
+    mode = (data[ProposalFields.MODE] as? String)?.let(PodMode::fromStored) ?: return null,
+    byUid = data[ProposalFields.BY_UID] as? String ?: return null,
+    yes = membersOf(data[ProposalFields.YES])?.sortedBy { it.name } ?: return null,
+    no = (data[ProposalFields.NO] as? Map<*, *>)?.keys?.filterIsInstance<String>()?.sorted() ?: return null,
+)
 
 // Only the fields whose value differs, so an update touches exactly what the change touched.
 fun changedFields(before: Group, after: Group): Map<String, Any?> {

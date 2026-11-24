@@ -74,6 +74,12 @@ A group's chat is readable by its members only, also after it's disbanded or arc
 it once they accept. A member sends a message as themselves, under their name in the group, while the group
 is open. The server stamps its time. Nobody can change or delete a message.
 
+Any member can propose the next session, within a new pod's limits; it replaces the last proposal and its
+votes, and the proposer counts as coming. Each member votes only for themselves, and leaving or handing
+over takes back the leaver's vote. Only the host schedules it, once at least one other member can come:
+one write makes the pod (the group's name and course, the proposal's time, place and vibe, the host plus
+everyone who said yes) and clears the proposal. The pod is public in Discover like any other.
+
 Test the rules on the Firestore emulator before publishing a change. The tests are in `rules-test/` and
 need Node, plus Java 21 or newer for the emulator (Android Studio's bundled JDK works):
 
@@ -114,9 +120,10 @@ key file. Only run it against our own project.
 | Cancel a pod | The host confirms, then a transaction sets `canceled` to true on the server copy. Like joining, it needs the network. Canceled pods drop out of Discover for everyone on their next refresh. |
 | Join or leave | A Firestore transaction reads the server's copy, checks capacity and the join cutoff, and adds or removes the user's own entry in `members`. Room changes only after the server agrees. Needs the network: offline, the card shows an error and nothing changes. |
 | Groups tab open | A live listener on groups whose `access` holds the user's uid keeps Room in step. A group the user leaves or declines drops out of the results and out of Room. Offline, the listener answers from Firestore's own cache. |
-| Keep, answer an invite, leave, hand over, disband | A transaction reads the server's copy (for keeping, the pod too), checks it with the rules in `Group.kt`, and writes only the fields that change. Needs the network. |
+| Keep, answer an invite, leave, hand over, disband, propose, vote | A transaction reads the server's copy (for keeping, the pod too), checks it with the rules in `Group.kt`, and writes only the fields that change. Needs the network. |
 | Group screen open | A live listener on the group's latest 300 messages, ordered by the server's time, upserts them into Room. One the server doesn't have yet shows as sending, at the phone's estimate of the time. |
 | Send a message | Saved to Room as sending, then written to Firestore with its own id. A plain write, not a transaction, so it queues offline and lands when the network is back, even after a restart. Refused by the rules (for example after leaving), it shows as failed and can be retried; a retry of one the server already has counts as sent. |
+| Schedule | One transaction reads the group, checks it with `scheduleProblem` in `Group.kt`, makes the pod with the proposal's id, and clears the proposal. The pod is saved to Room too, so it shows in Discover at once. Needs the network. |
 | Sign out or switch account | Cached groups and chat are deleted from the phone. Pods stay, since every BU student can read them. |
 | Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 
@@ -137,6 +144,7 @@ Collection `pods`, document id = pod id (a UUID made on the device).
 | `members` | map of uid to name | everyone going, the host included; at most `capacity` entries |
 | `mode` | string | `QUIET` (Quiet) or `TALK` (Open to chat). Older pods can have `COORDINATE`, which the app reads as `TALK` |
 | `canceled` | boolean | `false` on create; only the host can set it to `true`, and never back |
+| `groupId` | string or null | the group that scheduled it; `null` for a pod made in Discover, missing on older pods |
 
 Collection `groups`, document id = the id of the pod it was kept from.
 
@@ -154,6 +162,18 @@ Collection `groups`, document id = the id of the pod it was kept from.
 | `archivesAt` | timestamp | end of Dec 19, 2026 in Boston; read-only after |
 | `disbanded` | boolean | `false` on create; only the host sets it to `true` |
 | `disbandedAt` | timestamp | set by the server when disbanded |
+| `proposal` | map or null | the next session someone proposed (below); missing on older groups |
+
+A group's `proposal` map:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | also the id of the pod it becomes; no pod may have it yet |
+| `startsAt`, `endsAt` | timestamp | same limits as a new pod |
+| `building`, `meetingPoint`, `mode` | string | same as a pod's |
+| `byUid` | string | who proposed it |
+| `yes` | map of uid to name | members who can come; starts as the proposer |
+| `no` | map of uid to `true` | members who can't |
 
 Subcollection `groups/{groupId}/messages`, document id = message id (a UUID made on the device).
 
