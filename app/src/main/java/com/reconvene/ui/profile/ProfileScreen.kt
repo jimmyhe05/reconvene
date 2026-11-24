@@ -1,5 +1,10 @@
 package com.reconvene.ui.profile
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,11 +54,14 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reconvene.R
 import com.reconvene.data.auth.SignedInUser
+import com.reconvene.data.reminders.ReminderNotifications
 import com.reconvene.data.settings.Appearance
+import com.reconvene.data.settings.ReminderLead
 import com.reconvene.ui.discover.PodCard
 import com.reconvene.ui.theme.ReconveneTheme
 import com.reconvene.ui.theme.TimeStyles
@@ -70,6 +78,28 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Turning reminders on asks for permission to notify (Android 13 and up). The choice is saved only
+    // if the app can notify; otherwise Profile says where to turn notifications on.
+    var askingFor by rememberSaveable { mutableStateOf<ReminderLead?>(null) }
+    var remindersBlocked by rememberSaveable { mutableStateOf(false) }
+    val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val lead = askingFor
+        askingFor = null
+        if (granted && lead != null) viewModel.setReminderLead(lead) else remindersBlocked = true
+    }
+    val onReminderChange: (ReminderLead) -> Unit = { lead ->
+        remindersBlocked = false
+        when {
+            lead == ReminderLead.OFF || ReminderNotifications.canNotify(context) -> viewModel.setReminderLead(lead)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED -> {
+                askingFor = lead
+                askPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            // Allowed, but notifications for the app are switched off in the phone's settings.
+            else -> remindersBlocked = true
+        }
+    }
     ProfileContent(
         uiState = uiState,
         onSignIn = {
@@ -79,11 +109,13 @@ fun ProfileScreen(
         },
         onSignOut = viewModel::signOut,
         modifier = modifier,
+        remindersBlocked = remindersBlocked,
         actions = ProfileActions(
             onOpenPod = onOpenPod,
             onOpenBlocked = onOpenBlocked,
             onOpenSafety = onOpenSafety,
             onAppearanceChange = viewModel::setAppearance,
+            onReminderChange = onReminderChange,
         ),
     )
 }
@@ -93,6 +125,7 @@ class ProfileActions(
     val onOpenBlocked: () -> Unit = {},
     val onOpenSafety: () -> Unit = {},
     val onAppearanceChange: (Appearance) -> Unit = {},
+    val onReminderChange: (ReminderLead) -> Unit = {},
 )
 
 @Composable
@@ -101,6 +134,7 @@ fun ProfileContent(
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
+    remindersBlocked: Boolean = false,
     actions: ProfileActions = ProfileActions(),
 ) {
     Column(
@@ -118,7 +152,7 @@ fun ProfileContent(
         )
         val user = uiState.user
         if (user != null) {
-            SignedIn(user, uiState, onSignOut, actions)
+            SignedIn(user, uiState, remindersBlocked, onSignOut, actions)
         } else {
             SignedOut(uiState, onSignIn)
         }
@@ -126,8 +160,15 @@ fun ProfileContent(
 }
 
 @Composable
-private fun SignedIn(user: SignedInUser, uiState: ProfileUiState, onSignOut: () -> Unit, actions: ProfileActions) {
+private fun SignedIn(
+    user: SignedInUser,
+    uiState: ProfileUiState,
+    remindersBlocked: Boolean,
+    onSignOut: () -> Unit,
+    actions: ProfileActions,
+) {
     var choosingAppearance by rememberSaveable { mutableStateOf(false) }
+    var choosingReminder by rememberSaveable { mutableStateOf(false) }
     Identity(user)
     Record(uiState.record)
     uiState.nextPod?.let { pod ->
@@ -140,6 +181,21 @@ private fun SignedIn(user: SignedInUser, uiState: ProfileUiState, onSignOut: () 
         value = stringResource(uiState.appearance.labelRes),
         onClick = { choosingAppearance = true },
     )
+    SettingRow(
+        label = stringResource(R.string.profile_reminders),
+        value = stringResource(uiState.reminderLead.labelRes),
+        onClick = { choosingReminder = true },
+    )
+    if (remindersBlocked) {
+        Text(
+            text = stringResource(R.string.profile_reminders_blocked),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
     SectionLabel(R.string.profile_safety)
     SettingRow(
         label = stringResource(R.string.blocked_title),
@@ -158,13 +214,29 @@ private fun SignedIn(user: SignedInUser, uiState: ProfileUiState, onSignOut: () 
         Text(stringResource(R.string.profile_sign_out))
     }
     if (choosingAppearance) {
-        AppearanceDialog(
+        ChoiceDialog(
+            title = stringResource(R.string.profile_appearance),
+            options = Appearance.entries,
             current = uiState.appearance,
+            label = { it.labelRes },
             onChoose = {
                 actions.onAppearanceChange(it)
                 choosingAppearance = false
             },
             onDismiss = { choosingAppearance = false },
+        )
+    }
+    if (choosingReminder) {
+        ChoiceDialog(
+            title = stringResource(R.string.profile_reminders),
+            options = ReminderLead.entries,
+            current = uiState.reminderLead,
+            label = { it.labelRes },
+            onChoose = {
+                actions.onReminderChange(it)
+                choosingReminder = false
+            },
+            onDismiss = { choosingReminder = false },
         )
     }
 }
@@ -290,14 +362,22 @@ private fun SettingRow(label: String, value: String?, onClick: () -> Unit) {
     }
 }
 
+// One choice from a short list, as radio buttons.
 @Composable
-private fun AppearanceDialog(current: Appearance, onChoose: (Appearance) -> Unit, onDismiss: () -> Unit) {
+private fun <T> ChoiceDialog(
+    title: String,
+    options: List<T>,
+    current: T,
+    label: (T) -> Int,
+    onChoose: (T) -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.profile_appearance)) },
+        title = { Text(title) },
         text = {
             Column(Modifier.selectableGroup()) {
-                Appearance.entries.forEach { option ->
+                options.forEach { option ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -307,7 +387,7 @@ private fun AppearanceDialog(current: Appearance, onChoose: (Appearance) -> Unit
                     ) {
                         RadioButton(selected = option == current, onClick = null)
                         Text(
-                            text = stringResource(option.labelRes),
+                            text = stringResource(label(option)),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(start = 12.dp),
                         )
@@ -320,6 +400,14 @@ private fun AppearanceDialog(current: Appearance, onChoose: (Appearance) -> Unit
         },
     )
 }
+
+private val ReminderLead.labelRes: Int
+    get() = when (this) {
+        ReminderLead.OFF -> R.string.reminder_off
+        ReminderLead.MINUTES_15 -> R.string.reminder_15
+        ReminderLead.MINUTES_30 -> R.string.reminder_30
+        ReminderLead.HOUR_1 -> R.string.reminder_60
+    }
 
 private val Appearance.labelRes: Int
     get() = when (this) {

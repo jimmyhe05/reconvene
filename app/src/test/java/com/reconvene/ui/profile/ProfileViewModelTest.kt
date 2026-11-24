@@ -157,6 +157,17 @@ class ProfileViewModelTest {
     }
 
     @Test
+    fun choosingAReminderSavesIt() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+        assertEquals(ReminderLead.OFF, viewModel.uiState.value.reminderLead)
+
+        viewModel.setReminderLead(ReminderLead.MINUTES_30)
+
+        assertEquals(ReminderLead.MINUTES_30, viewModel.uiState.value.reminderLead)
+    }
+
+    @Test
     fun choosingAnAppearanceSavesIt() = runTest {
         val viewModel = viewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }

@@ -16,6 +16,7 @@ import com.reconvene.data.model.Pod
 import com.reconvene.data.repository.GroupRepository
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.data.settings.Appearance
+import com.reconvene.data.settings.ReminderLead
 import com.reconvene.data.settings.SettingsRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +51,7 @@ data class ProfileUiState(
     val nextPod: Pod? = null,
     val blockedCount: Int = 0,
     val appearance: Appearance = Appearance.SYSTEM,
+    val reminderLead: ReminderLead = ReminderLead.OFF,
     val now: Instant = Instant.EPOCH,
 )
 
@@ -89,9 +91,13 @@ class ProfileViewModel(
         }
     }
 
-    // current user + login progress + their activity + appearance = page state
+    private val preferences = combine(settingsRepository.appearance, settingsRepository.reminderLead) { appearance, lead ->
+        appearance to lead
+    }
+
+    // current user + login progress + their activity + preferences = page state
     val uiState: StateFlow<ProfileUiState> =
-        combine(authRepository.currentUser, progress, activity, settingsRepository.appearance) { user, progress, activity, appearance ->
+        combine(authRepository.currentUser, progress, activity, preferences) { user, progress, activity, (appearance, lead) ->
             ProfileUiState(
                 isAvailable = authRepository.isAvailable,
                 user = user,
@@ -101,6 +107,7 @@ class ProfileViewModel(
                 nextPod = activity?.nextPod,
                 blockedCount = activity?.blockedCount ?: 0,
                 appearance = appearance,
+                reminderLead = lead,
                 now = activity?.now ?: clock.instant(),
             )
         }.stateIn(
@@ -154,6 +161,11 @@ class ProfileViewModel(
 
     fun setAppearance(appearance: Appearance) {
         viewModelScope.launch { settingsRepository.setAppearance(appearance) }
+    }
+
+    // The screen asks for permission to notify first; this only saves the choice.
+    fun setReminderLead(lead: ReminderLead) {
+        viewModelScope.launch { settingsRepository.setReminderLead(lead) }
     }
 
     private suspend fun quietly(block: suspend () -> Unit) {

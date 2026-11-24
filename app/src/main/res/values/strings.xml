@@ -289,6 +289,12 @@
     <string name="profile_preferences">Preferences</string>
     <string name="profile_safety">Safety</string>
     <string name="profile_appearance">Appearance</string>
+    <string name="profile_reminders">Reminders</string>
+    <string name="profile_reminders_blocked">Turn on notifications for this app in your phone\'s settings to get reminders.</string>
+    <string name="reminder_off">Off</string>
+    <string name="reminder_15">15 min before</string>
+    <string name="reminder_30">30 min before</string>
+    <string name="reminder_60">1 hour before</string>
     <string name="appearance_system">Follow phone</string>
     <string name="appearance_light">Light</string>
     <string name="appearance_dark">Dark</string>
