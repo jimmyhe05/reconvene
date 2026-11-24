@@ -131,6 +131,7 @@ key file. Only run it against our own project.
 | Schedule | One transaction reads the group, checks it with `scheduleProblem` in `Group.kt`, makes the pod with the proposal's id, and clears the proposal. The pod is saved to Room too, so it shows in Discover at once. Needs the network. |
 | Report | A transaction checks whether this user already reported the message and writes the report if not. Needs the network. |
 | Block or unblock | A plain write to the user's own list, applied on the phone at once and sent when the network is back. A live listener on the list hides blocked people's messages and fills the Blocked list on Profile. |
+| Open Profile | Asks the server for every pod the user is in, ended ones too (`members.<uid>` has a name), and upserts them into Room, so the semester record is right on a new phone. Offline, Profile counts what Room has. |
 | Sign out or switch account | Cached groups and chat are deleted from the phone. Pods stay, since every BU student can read them. |
 | Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 

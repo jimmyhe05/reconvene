@@ -23,6 +23,9 @@ import com.reconvene.data.repository.OfflineFirstGroupRepository
 import com.reconvene.data.repository.OfflineFirstPodRepository
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.data.repository.clearWhenUserChanges
+import com.reconvene.data.settings.DataStoreSettingsRepository
+import com.reconvene.data.settings.SettingsRepository
+import com.reconvene.data.settings.settingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -58,6 +61,8 @@ class AppContainer(context: Context) {
     )
 
     val locationRepository: LocationRepository = DeviceLocationRepository(context)
+
+    val settingsRepository: SettingsRepository = DataStoreSettingsRepository(context.applicationContext.settingsDataStore)
 
     val authRepository: AuthRepository =
         firebaseApp?.let { FirebaseAuthRepository(FirebaseAuth.getInstance(it)) } ?: UnavailableAuthRepository

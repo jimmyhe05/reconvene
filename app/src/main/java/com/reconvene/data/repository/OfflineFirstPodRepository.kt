@@ -29,6 +29,10 @@ class OfflineFirstPodRepository(
         podDao.upsertAll(remote.fetchPods().map { it.toEntity() })
     }
 
+    override suspend fun refreshMine(uid: String) {
+        podDao.upsertAll(remote.fetchMyPods(uid).map { it.toEntity() })
+    }
+
     override suspend fun createPod(pod: Pod) {
         podDao.upsertAll(listOf(pod.toEntity()))
         remote.createPod(pod)

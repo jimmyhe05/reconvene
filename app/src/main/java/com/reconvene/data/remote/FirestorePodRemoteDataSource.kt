@@ -34,6 +34,19 @@ class FirestorePodRemoteDataSource(
         }
     }
 
+    // members maps uid to name, so "has a name under this uid" finds the user's pods, past ones
+    // included. Firestore indexes map keys by itself, and the rules let any BU user read pods.
+    override suspend fun fetchMyPods(uid: String): List<Pod> {
+        val snapshot = pods
+            .whereGreaterThan(FieldPath.of(PodFields.MEMBERS, uid), "")
+            .get(Source.SERVER)
+            .await()
+        return snapshot.documents.mapNotNull { document ->
+            document.data?.let { podFromFirestore(document.id, it) }
+                ?: null.also { Log.w(TAG, "Skipped malformed pod ${document.id}") }
+        }
+    }
+
     // Not awaited: Firestore saves the write on the device and sends it when the network is back.
     override suspend fun createPod(pod: Pod) {
         pods.document(pod.id)

@@ -8,15 +8,13 @@ for CS 501 (Mobile Application Development) in Fall 2026.
 
 ## Status
 
-We are working toward Update 2 (November 24, 2026). The app is not feature-complete yet.
+This is the app as of Update 2 (November 24, 2026). It is not feature-complete yet.
 
 | | Features |
 |---|---|
-| **Done** | Sign in with a verified @bu.edu Google account. Discover upcoming and ongoing pods, grouped by day, with search and filters. Create a pod for 2 to 50 people, with suggested buildings and meeting points. Join and leave a pod. The host can cancel a pod. Pods stay readable offline. App data is left out of backups and device transfer. |
-| **In progress (Update 2, Nov 24)** | Groups: the pod's host keeps it as a recurring group of up to 50, with invites, handing over the host role, disbanding, group chat, and proposing and voting on the next session. The data layer is in, running on sample groups; Firestore sync and the screens come next. Also planned: the meeting point on a map, and quick states ("Here", "Running late") with a shared timer. |
-| **Deferred** | A board for asks and offers, matching people by courses and free time, push notifications. |
-
-The Groups tab is a placeholder until its screens land.
+| **Done** | Sign in with a verified @bu.edu Google account. Discover upcoming and ongoing pods, grouped by day, with search, filters and walking times. Create a pod for 2 to 50 people, with suggested buildings and meeting points. Join and leave a pod; the host can cancel it. Groups: the pod's host keeps it as a group for the semester, with invites, handing over the host role, disbanding, group chat, and proposing, voting on and scheduling the next session; members can report a message and block someone. Profile shows this semester's pods, hours and groups, the next pod, an appearance choice (follow the phone, light or dark), blocked people and advice on meeting safely. Pods and groups stay readable offline. App data is left out of backups and device transfer. |
+| **Next (Final, Dec 8)** | Reminders before a pod starts. Quick states ("Here", "Running late") with a shared timer. |
+| **Deferred** | Deleting an account from the app, a board for asks and offers, matching people by courses and free time, push notifications from the server. |
 
 ## Team
 
@@ -149,7 +147,8 @@ Note that `connectedDebugAndroidTest` uninstalls the app when it finishes, which
 
 - Only verified @bu.edu Google accounts can sign in, and the Firestore rules check this on the server too.
 - A pod stores its host's and members' Google display names and Firebase user ids, nothing else about them.
-  The app doesn't collect location.
+  Location is read on the phone only when someone taps Nearest first, to show walking times; it is
+  never stored or sent.
 - The app opts out of Android backup and device-to-device transfer, so cached pods and the signed-in
   session stay on the phone they were made on.
 - Firebase settings live in `local.properties`, and `google-services.json` is gitignored. Neither is

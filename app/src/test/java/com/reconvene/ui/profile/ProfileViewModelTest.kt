@@ -12,6 +12,10 @@ import com.reconvene.testing.FakeGroupDao
 import com.reconvene.testing.FakeMessageDao
 import com.reconvene.testing.GroupTestPodDao
 import com.reconvene.testing.MainDispatcherRule
+import com.reconvene.testing.TestPodRepository
+import com.reconvene.testing.testPod
+import com.reconvene.data.settings.Appearance
+import com.reconvene.data.settings.SettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +25,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.IOException
@@ -44,10 +47,11 @@ class ProfileViewModelTest {
     private val groups =
         OfflineFirstGroupRepository(FakeGroupDao(messageDao), messageDao, GroupTestPodDao(), groupRemote, clock) { "new" }
 
+    private val pods = TestPodRepository()
+    private val settings = InMemorySettings()
     private val ben = PodMember("ben", "Ben")
-    private val ana = PodMember("ana", "Ana")
 
-    private fun viewModel() = ProfileViewModel(auth, groups, googleWebClientId = "web-client")
+    private fun viewModel() = ProfileViewModel(auth, pods, groups, settings, clock, googleWebClientId = "web-client")
 
     @Test
     fun successfulSignInShowsTheUser() = runTest {
@@ -122,35 +126,52 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun blockedPeopleShowByNameAndGoOnUnblock() = runTest {
+    fun signedInShowsTheirSemesterNextPodAndBlockedCount() = runTest {
+        val me = PodMember(terrier.uid, "Terrier")
+        val now = clock.instant()
+        val past = testPod(id = "past", startsAt = now.minusSeconds(24 * 3600), durationMinutes = 90).withMember(me)
+        val next = testPod(id = "next", startsAt = now.plusSeconds(3600)).withMember(me)
+        pods.cache(listOf(past, next, testPod(id = "theirs", startsAt = now.plusSeconds(600))))
         groups.block(terrier.uid, ben)
-        groups.block(terrier.uid, ana)
         val viewModel = viewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
-        assertTrue(viewModel.uiState.value.blocked.isEmpty())
 
         viewModel.signIn { "token" }
-        assertEquals(listOf(ana, ben), viewModel.uiState.value.blocked)
 
-        viewModel.unblock(ben.uid)
-        assertEquals(listOf(ana), viewModel.uiState.value.blocked)
-        assertFalse(viewModel.uiState.value.unblockFailed)
+        val state = viewModel.uiState.value
+        assertEquals(1, state.record.pods)
+        assertEquals("1.5", state.record.studied.hoursText())
+        assertEquals("next", state.nextPod?.id)
+        assertEquals(1, state.blockedCount)
     }
 
     @Test
-    fun anotherAccountsBlocksDontShow() = runTest {
-        groups.block("someone-else", ben)
+    fun signedOutShowsNoRecord() = runTest {
+        pods.cache(listOf(testPod(id = "next", startsAt = clock.instant().plusSeconds(3600)).withMember(PodMember(terrier.uid, "T"))))
         val viewModel = viewModel()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
-        viewModel.signIn { "token" }
-        assertTrue(viewModel.uiState.value.blocked.isEmpty())
+        assertEquals(NO_RECORD, viewModel.uiState.value.record)
+        assertNull(viewModel.uiState.value.nextPod)
+    }
 
-        groups.block(terrier.uid, ben)
-        assertEquals(listOf(ben), viewModel.uiState.value.blocked)
+    @Test
+    fun choosingAnAppearanceSavesIt() = runTest {
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+        assertEquals(Appearance.SYSTEM, viewModel.uiState.value.appearance)
 
-        viewModel.signOut()
-        assertTrue(viewModel.uiState.value.blocked.isEmpty())
+        viewModel.setAppearance(Appearance.DARK)
+
+        assertEquals(Appearance.DARK, viewModel.uiState.value.appearance)
+    }
+
+    private class InMemorySettings : SettingsRepository {
+        override val appearance = MutableStateFlow(Appearance.SYSTEM)
+
+        override suspend fun setAppearance(appearance: Appearance) {
+            this.appearance.value = appearance
+        }
     }
 
     private inner class FakeAuthRepository : AuthRepository {
