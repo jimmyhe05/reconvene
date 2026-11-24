@@ -101,6 +101,18 @@ class GroupScreenTest {
     }
 
     @Test
+    fun aHalfWrittenMessageSurvivesCheckingThePlan() {
+        open("g1")
+        waitForText("Start with problems 3 and 4.")
+
+        composeRule.onNode(hasSetTextAction()).performTextInput("Running 5 min late")
+        composeRule.onNodeWithText(string(R.string.group_tab_plan)).performClick()
+        composeRule.onNodeWithText(string(R.string.group_tab_chat)).performClick()
+
+        composeRule.onNodeWithText("Running 5 min late").assertIsDisplayed()
+    }
+
+    @Test
     fun answeringYesAddsYouToWhoCanCome() {
         open("g1")
         waitForText(string(R.string.group_tab_plan))

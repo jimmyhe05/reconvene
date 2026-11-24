@@ -73,6 +73,19 @@ class GroupViewModelTest {
         endTime = LocalTime.of(17, 30),
     )
 
+    // As after Android restores the app straight onto this screen: nothing else is syncing groups.
+    @Test
+    fun theGroupScreenLoadsTheGroupAndItsVotesOnItsOwn() = runTest {
+        val viewModel = GroupViewModel("g1", repository, TestAuthRepository(LOCAL_USER), clock) { "proposal" }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
+        assertEquals("Algorithms study group", viewModel.content().group.name)
+
+        val sam = PodMember("sample-sam", "Sam")
+        fake.vote(viewModel.content().group, sam, canCome = true)
+
+        assertEquals(true, viewModel.content().group.proposal?.voteOf(sam.uid))
+    }
+
     @Test
     fun messagesShowOldestFirst() = runTest {
         val viewModel = viewModel("g1")

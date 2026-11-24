@@ -168,10 +168,12 @@ fun GroupContent(
                 }
                 is GroupUiState.Content -> {
                     var tab by rememberSaveable { mutableStateOf(GroupTab.CHAT) }
+                    // Kept above the tabs, so checking the Plan tab doesn't throw away a half-written message.
+                    var draft by rememberSaveable { mutableStateOf("") }
                     Column(Modifier.fillMaxSize()) {
                         GroupTabRow(tab = tab, needsYourVote = uiState.needsYourVote, onSelect = { tab = it })
                         when (tab) {
-                            GroupTab.CHAT -> Chat(uiState, onRetrySync, onSend, onRetryMessage, onReport, onBlock)
+                            GroupTab.CHAT -> Chat(uiState, draft, { draft = it }, onRetrySync, onSend, onRetryMessage, onReport, onBlock)
                             GroupTab.PLAN -> GroupPlan(uiState, onVote, onSchedule, onPropose)
                         }
                     }
@@ -240,6 +242,8 @@ private fun BackToGroups(onBack: () -> Unit) {
 @Composable
 private fun Chat(
     uiState: GroupUiState.Content,
+    draft: String,
+    onDraftChange: (String) -> Unit,
     onRetrySync: () -> Unit,
     onSend: (String) -> Unit,
     onRetryMessage: (messageId: String) -> Unit,
@@ -286,7 +290,7 @@ private fun Chat(
                 }
             }
         }
-        if (uiState.isReadOnly) ReadOnlyBanner() else Composer(onSend)
+        if (uiState.isReadOnly) ReadOnlyBanner() else Composer(draft, onDraftChange, onSend)
     }
     uiState.messages.firstOrNull { it.id == reportingId }?.let { message ->
         ReportDialog(
@@ -424,8 +428,7 @@ private fun messageTime(sentAt: Instant, now: Instant, zone: ZoneId = ZoneId.sys
 }
 
 @Composable
-private fun Composer(onSend: (String) -> Unit) {
-    var draft by rememberSaveable { mutableStateOf("") }
+private fun Composer(draft: String, onDraftChange: (String) -> Unit, onSend: (String) -> Unit) {
     Column {
         HorizontalDivider()
         Row(
@@ -434,7 +437,7 @@ private fun Composer(onSend: (String) -> Unit) {
         ) {
             OutlinedTextField(
                 value = draft,
-                onValueChange = { draft = it.take(MESSAGE_MAX) },
+                onValueChange = { onDraftChange(it.take(MESSAGE_MAX)) },
                 label = { Text(stringResource(R.string.group_message_field)) },
                 supportingText = if (draft.length >= COUNTER_FROM) {
                     { Text(stringResource(R.string.create_counter, draft.length, MESSAGE_MAX)) }
@@ -448,7 +451,7 @@ private fun Composer(onSend: (String) -> Unit) {
             IconButton(
                 onClick = {
                     onSend(draft)
-                    draft = ""
+                    onDraftChange("")
                 },
                 enabled = draft.isNotBlank(),
             ) {

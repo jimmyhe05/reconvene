@@ -22,6 +22,7 @@ import com.reconvene.ui.create.CreatePodForm
 import com.reconvene.ui.navigation.GroupRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -78,11 +79,11 @@ class GroupViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GroupUiState.Loading)
 
     init {
-        // Keeps the chat matching the server while the screen is open. Starts over on sign-in or
-        // when the user taps Try again.
+        // Keeps the group and its chat matching the server while the screen is open. Starts over on
+        // sign-in or when the user taps Try again.
         viewModelScope.launch {
             combine(viewer, syncAttempts) { user, _ -> user }.collectLatest { user ->
-                if (user != null) syncMessages()
+                if (user != null) sync(user.uid)
             }
         }
     }
@@ -123,10 +124,17 @@ class GroupViewModel(
         _notice.value = null
     }
 
-    private suspend fun syncMessages() {
+    // The group syncs here too, not only on the Groups tab: after Android restores this screen on its
+    // own, the Groups tab isn't running, and votes would never arrive.
+    private suspend fun sync(uid: String) = coroutineScope {
         chatSyncFailed.value = false
+        launch { reportingFailure { groupRepository.syncGroups(uid) } }
+        reportingFailure { groupRepository.syncMessages(groupId) }
+    }
+
+    private suspend fun reportingFailure(sync: suspend () -> Unit) {
         try {
-            groupRepository.syncMessages(groupId)
+            sync()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
