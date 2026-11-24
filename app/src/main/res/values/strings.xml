@@ -71,6 +71,7 @@
     <string name="pod_keep">Keep pod</string>
     <string name="pod_cancel_title">Cancel this pod?</string>
     <string name="pod_cancel_body">It will disappear from Discover for everyone, including people who joined. This can\'t be undone.</string>
+    <string name="pod_created">Pod created. It\'s on Discover now.</string>
     <string name="pod_canceled">Pod canceled.</string>
     <string name="pod_group_kept">Group created. Invites sent.</string>
     <string name="keep_group_heading">Keep studying together</string>

@@ -3,9 +3,11 @@ package com.reconvene.ui.pod
 import androidx.annotation.StringRes
 import com.reconvene.R
 
-// A one-off message after a join, leave, cancel or keep: CANCELED and GROUP_KEPT confirm, the rest
-// say why something didn't go through. The LOCATION ones explain why Nearest first stayed off.
+// A one-off message after a create, join, leave, cancel or keep. CREATED, CANCELED and GROUP_KEPT
+// confirm, the rest say why something didn't go through. The LOCATION ones explain why Nearest
+// first stayed off.
 enum class PodMessage(@StringRes val textRes: Int) {
+    CREATED(R.string.pod_created),
     CANCELED(R.string.pod_canceled),
     GROUP_KEPT(R.string.pod_group_kept),
     FULL(R.string.pod_error_full),

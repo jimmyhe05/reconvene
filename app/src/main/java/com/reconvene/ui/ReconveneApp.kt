@@ -90,7 +90,12 @@ fun ReconveneApp() {
             composable<CreatePodRoute> {
                 CreatePodScreen(
                     onBack = dropUnlessResumed { navController.popBackStack() },
-                    onCreated = { navController.popBackStack() },
+                    // The new pod replaces the form, so Back from it goes to Discover.
+                    onCreated = { podId ->
+                        navController.navigate(PodDetailRoute(podId, justCreated = true)) {
+                            popUpTo<CreatePodRoute> { inclusive = true }
+                        }
+                    },
                 )
             }
             composable<PodDetailRoute> {

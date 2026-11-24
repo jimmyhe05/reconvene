@@ -36,6 +36,7 @@ class PodDetailViewModel(
     authRepository: AuthRepository,
     private val clock: Clock,
     private val walkMinutes: Int? = null,
+    justCreated: Boolean = false,
 ) : ViewModel() {
 
     private val actions = PodActionRunner(podRepository, viewModelScope)
@@ -64,6 +65,7 @@ class PodDetailViewModel(
 
     init {
         refreshPods()
+        if (justCreated) actions.show(PodMessage.CREATED)
     }
 
     fun retry() = refreshPods()
@@ -170,6 +172,7 @@ class PodDetailViewModel(
                     authRepository = container.authRepository,
                     clock = container.clock,
                     walkMinutes = route.walkMinutes,
+                    justCreated = route.justCreated,
                 )
             }
         }

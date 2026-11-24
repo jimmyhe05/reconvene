@@ -85,14 +85,14 @@ private val shortTime: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(For
 @Composable
 fun CreatePodScreen(
     onBack: () -> Unit,
-    onCreated: () -> Unit,
+    onCreated: (podId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CreatePodViewModel = viewModel(factory = CreatePodViewModel.Factory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshToday() }
-    LaunchedEffect(uiState.isCreated) {
-        if (uiState.isCreated) onCreated()
+    LaunchedEffect(uiState.createdPodId) {
+        uiState.createdPodId?.let(onCreated)
     }
     CreatePodContent(
         uiState = uiState,
