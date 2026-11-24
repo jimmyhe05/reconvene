@@ -283,6 +283,9 @@
     <string name="profile_error_no_bu_account">No BU account on this device yet. Add it with your full BU email (name@bu.edu), then try again.</string>
     <string name="profile_blocked_heading">Blocked</string>
     <string name="profile_next_up">Next up</string>
+    <string name="reminder_channel">Pod reminders</string>
+    <string name="reminder_channel_description">A heads-up before a pod you\'re going to starts.</string>
+    <string name="reminder_text">Starts at %1$s · %2$s, %3$s</string>
     <string name="profile_preferences">Preferences</string>
     <string name="profile_safety">Safety</string>
     <string name="profile_appearance">Appearance</string>
