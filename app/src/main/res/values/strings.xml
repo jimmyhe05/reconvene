@@ -45,8 +45,8 @@
 
     <string name="pod_time_ongoing">Ongoing until %1$s</string>
     <plurals name="pod_time_starts_in">
-        <item quantity="one">Starts in %d min</item>
-        <item quantity="other">Starts in %d min</item>
+        <item quantity="one">Starts in %1$d min · %2$s</item>
+        <item quantity="other">Starts in %1$d min · %2$s</item>
     </plurals>
     <string name="pod_time_range">%1$s, %2$s to %3$s</string>
     <string name="pod_place">%1$s, %2$s</string>
