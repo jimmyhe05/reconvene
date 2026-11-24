@@ -135,14 +135,33 @@ class FirestoreGroupRemoteDataSource(
         }
     }
 
-    // Proposals, reports and blocking reach Firestore in later changes.
+    // Replaces any earlier proposal and its votes. The proposer counts as coming, under their name in
+    // the group, which is what the rules compare against.
+    override suspend fun propose(group: Group, proposal: SessionProposal): Group =
+        change(group.id, { it.proposeProblem(proposal.byUid, proposal, clock.instant()) }) { latest ->
+            val proposer = latest.members.first { it.uid == proposal.byUid }
+            latest.withProposal(proposal.copy(yes = emptyList(), no = emptyList()).withVote(proposer, canCome = true))
+        }
+
+    override suspend fun vote(group: Group, member: PodMember, canCome: Boolean): Group =
+        change(group.id, { it.voteProblem(member.uid, clock.instant()) }) { latest ->
+            latest.withVote(latest.members.first { it.uid == member.uid }, canCome)
+        }
+
+    // One transaction makes the pod and clears the proposal, so a proposal is scheduled at most once.
+    // The pod takes the proposal's id and is public in Discover like any other.
+    override suspend fun schedule(group: Group, uid: String): Pair<Group, Pod> = transaction {
+        val latest = readGroup(this, group.id)
+        latest.scheduleProblem(uid, clock.instant())?.let { throw GroupActionException(it, latest) }
+        val pod = latest.scheduledPod()
+        val saved = latest.withoutProposal()
+        set(pods.document(pod.id), pod.toFirestore())
+        update(groups.document(group.id), changedFields(latest, saved))
+        saved to pod
+    }
+
+    // Reports and blocking reach Firestore in a later change.
     override fun observeBlocked(uid: String): Flow<Set<String>> = flowOf(emptySet())
-
-    override suspend fun propose(group: Group, proposal: SessionProposal): Group = notYet("Proposals")
-
-    override suspend fun vote(group: Group, member: PodMember, canCome: Boolean): Group = notYet("Voting")
-
-    override suspend fun schedule(group: Group, uid: String): Pair<Group, Pod> = notYet("Scheduling")
 
     override suspend fun report(report: MessageReport) = notYet("Reporting")
 

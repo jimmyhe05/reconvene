@@ -6,7 +6,9 @@ import com.reconvene.data.model.Group
 import com.reconvene.data.model.GroupMessage
 import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.PodMember
+import com.reconvene.data.model.PodMode
 import com.reconvene.data.model.SEMESTER_END
+import com.reconvene.data.model.SessionProposal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -106,5 +108,61 @@ class FirestoreGroupMappingTest {
         assertNull(messageFromFirestore("m1", "pod-1", data - MessageFields.TEXT, pending = false))
         assertNull(messageFromFirestore("m1", "pod-1", data + (MessageFields.AUTHOR_UID to 7), pending = false))
         assertNull(messageFromFirestore("m1", "pod-1", data + (MessageFields.SENT_AT to null), pending = false))
+    }
+
+    private val proposal = SessionProposal(
+        id = "next-1",
+        startsAt = sentAt,
+        endsAt = sentAt.plusSeconds(3600),
+        building = "Mugar Library",
+        meetingPoint = "2nd floor",
+        mode = PodMode.TALK,
+        byUid = ben.uid,
+        yes = listOf(ben, maya),
+        no = listOf(ana.uid),
+    )
+
+    @Test
+    fun proposalSurvivesRoundTripWithVotesSortedByName() {
+        val proposed = group.copy(invited = emptyList(), members = listOf(maya, ana, ben), proposal = proposal)
+
+        assertEquals(proposed, groupFromFirestore("pod-1", proposed.toFirestore()))
+        assertEquals(
+            mapOf("ben" to "Ben", "maya" to "Maya"),
+            (proposed.toFirestore()[GroupFields.PROPOSAL] as Map<*, *>)[ProposalFields.YES],
+        )
+        assertEquals(mapOf("ana" to true), (proposed.toFirestore()[GroupFields.PROPOSAL] as Map<*, *>)[ProposalFields.NO])
+    }
+
+    @Test
+    fun groupWithoutTheProposalFieldHasNoProposal() {
+        assertNull(groupFromFirestore("pod-1", group.toFirestore() - GroupFields.PROPOSAL)!!.proposal)
+    }
+
+    @Test
+    fun malformedProposalSkipsTheGroup() {
+        val data = group.copy(proposal = proposal).toFirestore()
+        val broken = (data[GroupFields.PROPOSAL] as Map<*, *>) - ProposalFields.ENDS_AT
+
+        assertNull(groupFromFirestore("pod-1", data + (GroupFields.PROPOSAL to broken)))
+        assertNull(groupFromFirestore("pod-1", data + (GroupFields.PROPOSAL to "soon")))
+    }
+
+    @Test
+    fun votingAndSchedulingChangeOnlyTheProposal() {
+        val proposed = group.copy(invited = emptyList(), members = listOf(maya, ana, ben), proposal = proposal)
+
+        assertEquals(setOf(GroupFields.PROPOSAL), changedFields(proposed, proposed.withVote(ana, canCome = true)).keys)
+        assertEquals(mapOf(GroupFields.PROPOSAL to null), changedFields(proposed, proposed.withoutProposal()))
+    }
+
+    @Test
+    fun leavingWithAVoteTakesItBackInTheSameWrite() {
+        val proposed = group.copy(invited = emptyList(), members = listOf(maya, ana, ben), hostHandover = null, proposal = proposal)
+
+        assertEquals(
+            setOf(GroupFields.MEMBERS, GroupFields.ACCESS, GroupFields.PROPOSAL),
+            changedFields(proposed, proposed.withoutMember(ana.uid)).keys,
+        )
     }
 }

@@ -140,7 +140,7 @@ describe('keeping a pod as a group', () => {
     const maya = as('maya');
     await assertFails(setDoc(doc(maya, 'groups/p1'), newGroup({ archivesAt: Timestamp.fromMillis(SEMESTER_END.toMillis() + MINUTE) })));
     await assertFails(setDoc(doc(maya, 'groups/p1'), newGroup({ handover: { uid: 'ana', name: 'Ana' } })));
-    await assertFails(setDoc(doc(maya, 'groups/p1'), newGroup({ proposal: null })));
+    await assertFails(setDoc(doc(maya, 'groups/p1'), newGroup({ pinned: true })));
   });
 
   test('the group id must be the pod id', async () => {

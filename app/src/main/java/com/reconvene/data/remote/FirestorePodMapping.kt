@@ -24,6 +24,10 @@ object PodFields {
     const val MEMBERS = "members"
     const val MODE = "mode"
     const val CANCELED = "canceled"
+
+    // The group that scheduled the pod, or null for a pod someone made in Discover. Pods made before
+    // groups could schedule don't have the field.
+    const val GROUP_ID = "groupId"
 }
 
 // The document id is the pod id, so it is not repeated as a field. Firestore stores a Date as a timestamp.
@@ -40,6 +44,7 @@ fun Pod.toFirestore(): Map<String, Any?> = mapOf(
     PodFields.MEMBERS to members.associate { it.uid to it.name },
     PodFields.MODE to mode.name,
     PodFields.CANCELED to canceled,
+    PodFields.GROUP_ID to groupId,
 )
 
 // Returns null for a document that is missing a field or has the wrong type.
@@ -65,6 +70,7 @@ fun podFromFirestore(id: String, data: Map<String, Any?>): Pod? {
         members = members,
         mode = mode,
         canceled = data[PodFields.CANCELED] as? Boolean ?: false,
+        groupId = data[PodFields.GROUP_ID] as? String,
     )
 }
 

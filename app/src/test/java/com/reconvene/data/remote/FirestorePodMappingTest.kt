@@ -76,4 +76,13 @@ class FirestorePodMappingTest {
 
         assertNull(podFromFirestore("a1", legacy))
     }
+
+    @Test
+    fun groupIdIsKeptAndMissingOnOlderPods() {
+        val scheduled = testPod(id = "a1", startsAt = noon).copy(groupId = "g1")
+
+        assertEquals(scheduled, podFromFirestore("a1", scheduled.toFirestore()))
+        assertNull(testPod(id = "a1", startsAt = noon).toFirestore()[PodFields.GROUP_ID])
+        assertNull(podFromFirestore("a1", scheduled.toFirestore() - PodFields.GROUP_ID)!!.groupId)
+    }
 }

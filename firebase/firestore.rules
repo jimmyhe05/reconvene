@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Only signed-in users with a verified @bu.edu Google account can read or write pods.
-// - Create: the creator must be the host and the only member.
+// - Create: the creator must be the host and the only member. Or a group's host schedules the group's
+//   proposal: the pod matches it, everyone who said they can come is in, and the same write clears it.
 // - Update: a user may add or remove only themselves in members. Joining stops at capacity and
 //   10 minutes before the end. The host can't leave.
 // - Cancel: only the host, only canceled going from false to true, and only before the pod ends.
@@ -18,7 +19,9 @@ rules_version = '2';
 //   disbanded or the semester is over. An invited user accepts or declines for themselves. A member
 //   leaves for themselves, but the host can't; the host offers the role to a member, the host or that
 //   member calls it off, and when that member accepts they become host and the old host leaves.
-//   Only the host disbands, which marks the group and keeps it.
+//   Only the host disbands, which marks the group and keeps it. Any member proposes the next session,
+//   replacing the last proposal and its votes, and counts as coming; each member votes only for
+//   themselves; leaving or handing over takes back the leaver's vote; only the host schedules it.
 // - Delete: never.
 //
 // Group chat (MessageFields in FirestoreGroupMapping.kt, MESSAGE_MAX in Group.kt), in
@@ -30,7 +33,10 @@ service cloud.firestore {
 
     match /pods/{podId} {
       allow read: if isBuUser();
-      allow create: if isBuUser() && podId.size() <= 64 && isValidNewPod(request.resource.data);
+      allow create: if isBuUser() && podId.size() <= 64
+        && (isValidNewPod(request.resource.data)
+            || (request.resource.data.get('groupId', null) is string
+                && isScheduledPod(podId, request.resource.data)));
       allow update: if isBuUser() && (isJoin(resource.data, request.resource.data)
                                        || isLeave(resource.data, request.resource.data)
                                        || isCancel(resource.data, request.resource.data));
@@ -50,7 +56,10 @@ service cloud.firestore {
             || isOfferHandover(resource.data, request.resource.data)
             || isWithdrawHandover(resource.data, request.resource.data)
             || isAcceptHandover(resource.data, request.resource.data)
-            || isDisband(resource.data, request.resource.data));
+            || isDisband(resource.data, request.resource.data)
+            || isPropose(resource.data, request.resource.data)
+            || isVote(resource.data, request.resource.data)
+            || isSchedule(groupId, resource.data, request.resource.data));
       allow delete: if false;
 
       match /messages/{messageId} {
@@ -94,7 +103,9 @@ service cloud.firestore {
       let length = pod.endsAt.toMillis() - pod.startsAt.toMillis();
       let fields = ['title', 'course', 'building', 'meetingPoint', 'startsAt', 'endsAt',
                     'capacity', 'hostUid', 'hostName', 'members', 'mode', 'canceled'];
-      return pod.keys().hasOnly(fields) && pod.keys().hasAll(fields)
+      // groupId is null on a pod made in Discover; builds from before it existed leave it out.
+      return pod.keys().hasOnly(fields.concat(['groupId'])) && pod.keys().hasAll(fields)
+        && pod.get('groupId', null) == null
         && pod.title is string && pod.title.size() >= 3 && pod.title.size() <= 60
         && (pod.course == null || (pod.course is string && pod.course.size() <= 20))
         && pod.building is string && pod.building.size() >= 1 && pod.building.size() <= 80
@@ -186,7 +197,9 @@ service cloud.firestore {
       let invites = pod.members.diff(group.invited);
       let fields = ['name', 'course', 'fromPodId', 'hostUid', 'keptByUid', 'members', 'invited',
                     'access', 'handover', 'archivesAt', 'disbanded'];
-      return group.keys().hasOnly(fields) && group.keys().hasAll(fields)
+      // proposal starts null; builds from before it existed leave it out.
+      return group.keys().hasOnly(fields.concat(['proposal'])) && group.keys().hasAll(fields)
+        && group.get('proposal', null) == null
         && group.name is string && group.name.size() >= 3 && group.name.size() <= 40
         && group.course == pod.course
         && group.fromPodId == groupId
@@ -227,13 +240,15 @@ service cloud.firestore {
         && isWithoutAccess(before, after, uid);
     }
 
-    // A member other than the host takes themselves out. A handover offered to them is called off too.
+    // A member other than the host takes themselves out. A handover offered to them is called off too,
+    // and their vote is taken back.
     function isLeaveGroup(before, after) {
       let uid = request.auth.uid;
-      return after.diff(before).affectedKeys().hasOnly(['members', 'access', 'handover'])
+      return after.diff(before).affectedKeys().hasOnly(['members', 'access', 'handover', 'proposal'])
         && uid != before.hostUid
         && isRemovedKey(before.members, after.members, uid)
         && isWithoutAccess(before, after, uid)
+        && isWithoutVote(before, after, uid)
         && (after.handover == before.handover
             || (before.handover != null && before.handover.uid == uid && after.handover == null));
     }
@@ -259,10 +274,11 @@ service cloud.firestore {
         && (uid == before.hostUid || uid == before.handover.uid);
     }
 
-    // The member offered the role takes it, and the old host leaves in the same write.
+    // The member offered the role takes it, and the old host leaves in the same write, vote and all.
     function isAcceptHandover(before, after) {
       let uid = request.auth.uid;
-      return after.diff(before).affectedKeys().hasOnly(['hostUid', 'handover', 'members', 'access'])
+      return after.diff(before).affectedKeys().hasOnly(['hostUid', 'handover', 'members', 'access', 'proposal'])
+        && isWithoutVote(before, after, before.hostUid)
         && before.handover != null
         && before.handover.uid == uid
         && after.hostUid == uid
@@ -277,6 +293,106 @@ service cloud.firestore {
         && request.auth.uid == before.hostUid
         && after.disbanded == true
         && after.disbandedAt == request.time;
+    }
+
+    // No proposal, or the same one with uid's vote gone (or never there), so someone who's left can't
+    // count toward scheduling.
+    function isWithoutVote(before, after, uid) {
+      let was = before.get('proposal', null);
+      let now = after.get('proposal', null);
+      return (was == null && now == null)
+        || (was != null && now != null
+            && now.diff(was).affectedKeys().hasOnly(['yes', 'no'])
+            && now.yes.diff(was.yes).affectedKeys().hasOnly([uid]) && !(uid in now.yes)
+            && now.no.diff(was.no).affectedKeys().hasOnly([uid]) && !(uid in now.no));
+    }
+
+    // A member suggests the next session, with the same limits as a new pod, and counts as coming.
+    // It replaces any earlier proposal and its votes. Its id becomes the pod's, so it can't be taken.
+    function isPropose(before, after) {
+      let uid = request.auth.uid;
+      let proposal = after.proposal;
+      let minute = 60 * 1000;
+      let fields = ['id', 'startsAt', 'endsAt', 'building', 'meetingPoint', 'mode', 'byUid', 'yes', 'no'];
+      return after.diff(before).affectedKeys().hasOnly(['proposal'])
+        && uid in before.members
+        && proposal is map
+        && proposal.keys().hasOnly(fields) && proposal.keys().hasAll(fields)
+        && proposal.id is string && proposal.id.size() >= 1 && proposal.id.size() <= 64
+        && !exists(/databases/$(database)/documents/pods/$(proposal.id))
+        && proposal.startsAt is timestamp && proposal.endsAt is timestamp
+        && proposal.endsAt > request.time
+        && proposal.endsAt.toMillis() - proposal.startsAt.toMillis() >= 30 * minute
+        && proposal.endsAt.toMillis() - proposal.startsAt.toMillis() <= 240 * minute
+        && proposal.startsAt.toMillis() <= request.time.toMillis() + 7 * 24 * 60 * minute
+        && proposal.building is string && proposal.building.size() >= 1 && proposal.building.size() <= 80
+        && proposal.meetingPoint is string && proposal.meetingPoint.size() >= 3 && proposal.meetingPoint.size() <= 80
+        && proposal.mode in ['QUIET', 'TALK']
+        && proposal.byUid == uid
+        && proposal.yes is map && proposal.yes.keys().hasOnly([uid]) && proposal.yes.size() == 1
+        && proposal.yes[uid] == before.members[uid]
+        && proposal.no is map && proposal.no.size() == 0;
+    }
+
+    // A member says they can or can't come to the proposal while it hasn't ended, changing only their
+    // own vote, under their name in the group.
+    function isVote(before, after) {
+      let uid = request.auth.uid;
+      let was = before.get('proposal', null);
+      let now = after.proposal;
+      return after.diff(before).affectedKeys().hasOnly(['proposal'])
+        && uid in before.members
+        && was != null && now is map
+        && was.endsAt > request.time
+        && now.diff(was).affectedKeys().hasOnly(['yes', 'no'])
+        && now.yes.diff(was.yes).affectedKeys().hasOnly([uid])
+        && now.no.diff(was.no).affectedKeys().hasOnly([uid])
+        && ((uid in now.yes && now.yes[uid] == before.members[uid] && !(uid in now.no))
+            || (uid in now.no && now.no[uid] == true && !(uid in now.yes)));
+    }
+
+    // The host clears the proposal in the same write that makes its pod (isScheduledPod).
+    function isSchedule(groupId, before, after) {
+      let was = before.get('proposal', null);
+      let podPath = /databases/$(database)/documents/pods/$(was.id);
+      return after.diff(before).affectedKeys().hasOnly(['proposal'])
+        && request.auth.uid == before.hostUid
+        && was != null && after.proposal == null
+        && existsAfter(podPath)
+        && getAfter(podPath).data.get('groupId', null) == groupId;
+    }
+
+    // The pod a group's host makes from the group's proposal: its time, place and vibe, the group's
+    // name and course, and the host plus everyone who said they can come, at least two. The same
+    // write clears the proposal, so it's scheduled once.
+    function isScheduledPod(podId, pod) {
+      let uid = request.auth.uid;
+      let groupPath = /databases/$(database)/documents/groups/$(pod.groupId);
+      let group = get(groupPath).data;
+      let proposal = group.get('proposal', null);
+      // Compared with who said yes, the members add at most the host and change no names.
+      let going = pod.members.diff(proposal.yes);
+      let fields = ['title', 'course', 'building', 'meetingPoint', 'startsAt', 'endsAt',
+                    'capacity', 'hostUid', 'hostName', 'members', 'mode', 'canceled', 'groupId'];
+      return pod.keys().hasOnly(fields) && pod.keys().hasAll(fields)
+        && isOpen(group)
+        && group.hostUid == uid
+        && proposal != null && proposal.id == podId
+        && getAfter(groupPath).data.get('proposal', null) == null
+        && pod.title == group.name && pod.course == group.course
+        && pod.building == proposal.building && pod.meetingPoint == proposal.meetingPoint
+        && pod.startsAt == proposal.startsAt && pod.endsAt == proposal.endsAt
+        && pod.endsAt > request.time
+        && pod.mode == proposal.mode
+        && pod.hostUid == uid && pod.hostName == group.members[uid]
+        && pod.members is map
+        && pod.members[uid] == group.members[uid]
+        && going.addedKeys().hasOnly([uid])
+        && going.removedKeys().size() == 0
+        && going.changedKeys().size() == 0
+        && pod.members.size() >= 2
+        && pod.capacity is int && pod.capacity >= pod.members.size() && pod.capacity <= 50
+        && pod.canceled == false;
     }
   }
 }
