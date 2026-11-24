@@ -12,6 +12,10 @@ import com.reconvene.ReconveneApplication
 import com.reconvene.data.auth.AuthRepository
 import com.reconvene.data.auth.SignedInUser
 import com.reconvene.data.auth.actingUser
+import com.reconvene.data.location.GeoPoint
+import com.reconvene.data.location.LocationRepository
+import com.reconvene.data.location.UnavailableLocationRepository
+import com.reconvene.data.location.walkingMinutesFrom
 import com.reconvene.data.model.Pod
 import com.reconvene.data.repository.PodRepository
 import com.reconvene.ui.pod.PodActionRunner
@@ -32,6 +36,7 @@ class DiscoverViewModel(
     private val authRepository: AuthRepository,
     private val clock: Clock,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    private val locationRepository: LocationRepository = UnavailableLocationRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<DiscoverUiState>(DiscoverUiState.Loading)
@@ -45,6 +50,10 @@ class DiscoverViewModel(
 
     private var viewer: SignedInUser? = null
     private var loadJob: Job? = null
+
+    // Only in memory, and only while Nearest first is on. Never saved.
+    private val here = MutableStateFlow<Located>(Located.Off)
+    private var locateJob: Job? = null
 
     init {
         // Reloads on sign-in and sign-out, since what the user may read depends on who they are.
@@ -82,6 +91,30 @@ class DiscoverViewModel(
 
     fun messageShown() = actions.messageShown()
 
+    // The screen calls this once the location permission is granted.
+    fun findNearby() {
+        if (here.value == Located.Finding) return
+        here.value = Located.Finding
+        locateJob = viewModelScope.launch {
+            val point = try {
+                locationRepository.currentLocation()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
+            here.value = point?.let { Located.At(it) } ?: Located.Off
+            if (point == null) actions.show(PodMessage.LOCATION_UNAVAILABLE)
+        }
+    }
+
+    fun stopNearby() {
+        locateJob?.cancel()
+        here.value = Located.Off
+    }
+
+    fun locationDenied() = actions.show(PodMessage.LOCATION_DENIED)
+
     private fun loadPods() {
         loadJob?.cancel()
         val user = viewer
@@ -102,8 +135,9 @@ class DiscoverViewModel(
                     RefreshStatus.FAILED
                 }
             }
-            combine(podRepository.observePods(), refresh, actions.busyPodIds, filter) { pods, refreshStatus, busy, filter ->
-                toUiState(pods, refreshStatus, user.uid, busy, filter)
+            combine(podRepository.observePods(), refresh, actions.busyPodIds, filter, here) {
+                    pods, refreshStatus, busy, filter, here ->
+                toUiState(pods, refreshStatus, user.uid, busy, filter, here)
             }
                 .catch { emit(DiscoverUiState.Error) }
                 .collect { _uiState.value = it }
@@ -116,6 +150,7 @@ class DiscoverViewModel(
         viewerUid: String,
         busy: Set<String>,
         filter: PodFilter,
+        here: Located,
     ): DiscoverUiState {
         val now = clock.instant()
         val listed = groupIntoSections(pods, now, clock.zone)
@@ -128,7 +163,21 @@ class DiscoverViewModel(
                 } else {
                     listed
                 }
-                DiscoverUiState.Content(sections, now, viewerUid, busy, filter)
+                val point = (here as? Located.At)?.point
+                val walkMinutes = point?.let { walkTimes(pods, it) }.orEmpty()
+                DiscoverUiState.Content(
+                    sections = if (point == null) sections else sortedByWalk(sections, walkMinutes),
+                    now = now,
+                    viewerUid = viewerUid,
+                    busyPodIds = busy,
+                    filter = filter,
+                    walkMinutes = walkMinutes,
+                    nearby = when (here) {
+                        Located.Off -> Nearby.OFF
+                        Located.Finding -> Nearby.LOCATING
+                        is Located.At -> Nearby.ON
+                    },
+                )
             }
             refresh == RefreshStatus.RUNNING -> DiscoverUiState.Loading
             refresh == RefreshStatus.FAILED -> DiscoverUiState.Error
@@ -136,7 +185,21 @@ class DiscoverViewModel(
         }
     }
 
+    private fun walkTimes(pods: List<Pod>, here: GeoPoint): Map<String, Int> =
+        pods.mapNotNull { pod -> pod.walkingMinutesFrom(here)?.let { pod.id to it } }.toMap()
+
+    // Keeps the time sections, nearest first inside each. Pods with no walking time go last, and
+    // sortedBy keeps ties in start order.
+    private fun sortedByWalk(sections: List<PodSection>, walkMinutes: Map<String, Int>): List<PodSection> =
+        sections.map { section -> section.copy(pods = section.pods.sortedBy { walkMinutes[it.id] ?: Int.MAX_VALUE }) }
+
     private enum class RefreshStatus { RUNNING, DONE, FAILED }
+
+    private sealed interface Located {
+        data object Off : Located
+        data object Finding : Located
+        data class At(val point: GeoPoint) : Located
+    }
 
     companion object {
         private const val FILTER_KEY = "filter"
@@ -149,6 +212,7 @@ class DiscoverViewModel(
                     authRepository = container.authRepository,
                     clock = container.clock,
                     savedStateHandle = createSavedStateHandle(),
+                    locationRepository = container.locationRepository,
                 )
             }
         }

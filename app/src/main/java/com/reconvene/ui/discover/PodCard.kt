@@ -51,6 +51,7 @@ fun PodCard(
     onLeave: () -> Unit = {},
     onCancel: () -> Unit = {},
     onOpen: (() -> Unit)? = null,
+    walkMinutes: Int? = null,
 ) {
     val openLabel = stringResource(R.string.pod_detail_open)
     val opens = if (onOpen != null) {
@@ -69,7 +70,8 @@ fun PodCard(
         Text(pod.title, style = MaterialTheme.typography.titleLarge)
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             MetaLine(R.drawable.ic_clock, podTimeText(pod, now))
-            MetaLine(R.drawable.ic_pin, stringResource(R.string.pod_place, pod.building, pod.meetingPoint))
+            val place = stringResource(R.string.pod_place, pod.building, pod.meetingPoint)
+            MetaLine(R.drawable.ic_pin, walkMinutes?.let { stringResource(R.string.pod_place_walk, place, it) } ?: place)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(

@@ -13,10 +13,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 interface LocationRepository {
-    // One fix of where the phone is now, or null when location is off or takes too long.
-    // The caller asks for the permission first. Nothing here keeps the result.
-    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION])
+    // One fix of where the phone is now, or null when location is off, not allowed, or takes too
+    // long. The caller asks for the permission first. Nothing here keeps the result.
     suspend fun currentLocation(): GeoPoint?
+}
+
+// For builds and tests with no location, like a phone with location switched off.
+object UnavailableLocationRepository : LocationRepository {
+    override suspend fun currentLocation(): GeoPoint? = null
 }
 
 class DeviceLocationRepository(context: Context) : LocationRepository {
@@ -24,8 +28,15 @@ class DeviceLocationRepository(context: Context) : LocationRepository {
     private val appContext = context.applicationContext
     private val locationManager = appContext.getSystemService(LocationManager::class.java)
 
+    override suspend fun currentLocation(): GeoPoint? = try {
+        locate()
+    } catch (e: SecurityException) {
+        // The permission was taken away between the screen's check and this call.
+        null
+    }
+
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION])
-    override suspend fun currentLocation(): GeoPoint? {
+    private suspend fun locate(): GeoPoint? {
         val provider = bestProvider() ?: return null
         return withTimeoutOrNull(TIMEOUT_MILLIS) {
             suspendCancellableCoroutine { continuation ->

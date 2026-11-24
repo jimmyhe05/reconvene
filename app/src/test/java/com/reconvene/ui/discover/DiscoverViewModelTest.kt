@@ -1,6 +1,9 @@
 package com.reconvene.ui.discover
 
 import androidx.lifecycle.SavedStateHandle
+import com.reconvene.data.location.GeoPoint
+import com.reconvene.data.location.LocationRepository
+import com.reconvene.data.location.buildingLocations
 import com.reconvene.data.model.PodActionException
 import com.reconvene.data.model.PodActionProblem
 import com.reconvene.data.model.PodMember
@@ -237,4 +240,70 @@ class DiscoverViewModelTest {
         assertEquals(PodMessage.FAILED, viewModel.message.value)
         assertTrue(viewModel.uiState.value is DiscoverUiState.Content)
     }
+
+    // Two pods in the same section: Questrom starts first, but GSU is next door to where we are.
+    private suspend fun nearbyViewModel(location: LocationRepository): DiscoverViewModel {
+        repository.cache(
+            listOf(
+                testPod(id = "questrom", startsAt = minutesFromNow(20)).copy(building = "Questrom"),
+                testPod(id = "gsu", startsAt = minutesFromNow(40)).copy(building = "GSU"),
+                testPod(id = "dorm", startsAt = minutesFromNow(30)).copy(building = "My dorm lounge"),
+            )
+        )
+        return DiscoverViewModel(repository, auth, clock, locationRepository = location)
+    }
+
+    private fun DiscoverViewModel.content() = uiState.value as DiscoverUiState.Content
+
+    private fun DiscoverUiState.Content.order() = sections.flatMap { section -> section.pods.map { it.id } }
+
+    @Test
+    fun nearestFirstSortsBySectionWalkAndLeavesUnknownBuildingsLast() = runTest {
+        val viewModel = nearbyViewModel(FixedLocation(buildingLocations.getValue("Mugar Library")))
+        assertEquals(listOf("questrom", "dorm", "gsu"), viewModel.content().order())
+
+        viewModel.findNearby()
+
+        val content = viewModel.content()
+        assertEquals(Nearby.ON, content.nearby)
+        assertEquals(listOf("gsu", "questrom", "dorm"), content.order())
+        assertEquals(setOf("gsu", "questrom"), content.walkMinutes.keys)
+        assertTrue(content.walkMinutes.getValue("gsu") < content.walkMinutes.getValue("questrom"))
+    }
+
+    @Test
+    fun turningNearestFirstOffGoesBackToTimeOrder() = runTest {
+        val viewModel = nearbyViewModel(FixedLocation(buildingLocations.getValue("Mugar Library")))
+        viewModel.findNearby()
+
+        viewModel.stopNearby()
+
+        assertEquals(Nearby.OFF, viewModel.content().nearby)
+        assertEquals(listOf("questrom", "dorm", "gsu"), viewModel.content().order())
+        assertEquals(emptyMap<String, Int>(), viewModel.content().walkMinutes)
+    }
+
+    @Test
+    fun noLocationFixLeavesNearestFirstOffAndSaysWhy() = runTest {
+        val viewModel = nearbyViewModel(FixedLocation(null))
+
+        viewModel.findNearby()
+
+        assertEquals(Nearby.OFF, viewModel.content().nearby)
+        assertEquals(PodMessage.LOCATION_UNAVAILABLE, viewModel.message.value)
+    }
+
+    @Test
+    fun aDeniedPermissionKeepsTimeOrderAndSaysWhy() = runTest {
+        val viewModel = nearbyViewModel(FixedLocation(buildingLocations.getValue("Mugar Library")))
+
+        viewModel.locationDenied()
+
+        assertEquals(Nearby.OFF, viewModel.content().nearby)
+        assertEquals(PodMessage.LOCATION_DENIED, viewModel.message.value)
+    }
+}
+
+private class FixedLocation(private val point: GeoPoint?) : LocationRepository {
+    override suspend fun currentLocation(): GeoPoint? = point
 }
