@@ -15,4 +15,5 @@ enum class PodMessage(@StringRes val textRes: Int) {
     FAILED(R.string.pod_error_failed),
     LOCATION_DENIED(R.string.nearby_denied),
     LOCATION_UNAVAILABLE(R.string.nearby_unavailable),
+    NO_MAPS_APP(R.string.pod_detail_no_maps),
 }

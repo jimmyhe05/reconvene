@@ -66,6 +66,15 @@ class PodDetailViewModelTest {
 
     private fun viewModel() = PodDetailViewModel("a1", repository, groupRepository, auth, clock)
 
+    @Test
+    fun theWalkingTimeFromDiscoverShowsWithThePod() = runTest {
+        repository.cache(listOf(pod))
+        val viewModel = PodDetailViewModel("a1", repository, groupRepository, auth, clock, walkMinutes = 6)
+        watch(viewModel)
+
+        assertEquals(6, (viewModel.uiState.value as PodDetailUiState.Content).walkMinutes)
+    }
+
     private suspend fun store(pod: Pod) {
         repository.cache(listOf(pod))
         groupPodDao.upsertAll(listOf(pod.toEntity()))

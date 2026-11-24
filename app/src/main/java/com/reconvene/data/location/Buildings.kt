@@ -7,6 +7,7 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
+import java.net.URLEncoder
 
 data class GeoPoint(val latitude: Double, val longitude: Double)
 
@@ -44,3 +45,14 @@ fun walkingMinutes(meters: Double): Int = ceil(meters * ROUTE_FACTOR / WALK_METE
 // Null when the pod's building isn't one we know the location of.
 fun Pod.walkingMinutesFrom(here: GeoPoint): Int? =
     buildingLocations[building]?.let { walkingMinutes(here.metersTo(it)) }
+
+// A geo: link any maps app can open. Known buildings get a pin at their coordinates; others are a
+// search for the name on campus.
+fun Pod.mapLink(): String {
+    val label = encode(building)
+    return buildingLocations[building]
+        ?.let { "geo:${it.latitude},${it.longitude}?q=${it.latitude},${it.longitude}($label)" }
+        ?: "geo:0,0?q=${encode("$building, Boston University")}"
+}
+
+private fun encode(text: String): String = URLEncoder.encode(text, Charsets.UTF_8).replace("+", "%20")

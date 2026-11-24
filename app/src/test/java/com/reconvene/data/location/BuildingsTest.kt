@@ -44,4 +44,15 @@ class BuildingsTest {
 
         assertTrue(toKilachand < toGsu)
     }
+
+    @Test
+    fun aKnownBuildingOpensAsAPinAndAnyOtherAsACampusSearch() {
+        val atMugar = testPod(id = "a1", startsAt = noon).copy(building = "Mugar Library")
+
+        assertEquals("geo:42.351,-71.1079?q=42.351,-71.1079(Mugar%20Library)", atMugar.mapLink())
+        assertEquals(
+            "geo:0,0?q=Hillel%20House%2C%20Boston%20University",
+            atMugar.copy(building = "Hillel House").mapLink(),
+        )
+    }
 }

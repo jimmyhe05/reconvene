@@ -81,7 +81,7 @@ class DiscoverScreenTest {
         )
         composeRule.setContent {
             ReconveneTheme {
-                DiscoverScreen(onCreatePod = {}, onSignIn = {}, onOpenPod = { openedPodId = it }, viewModel = viewModel)
+                DiscoverScreen(onCreatePod = {}, onSignIn = {}, onOpenPod = { podId, _ -> openedPodId = podId }, viewModel = viewModel)
             }
         }
     }

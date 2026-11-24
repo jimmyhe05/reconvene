@@ -77,7 +77,7 @@ import java.time.ZoneId
 fun DiscoverScreen(
     onCreatePod: () -> Unit,
     onSignIn: () -> Unit,
-    onOpenPod: (podId: String) -> Unit,
+    onOpenPod: (podId: String, walkMinutes: Int?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DiscoverViewModel = viewModel(factory = DiscoverViewModel.Factory),
 ) {
@@ -100,7 +100,7 @@ fun DiscoverScreen(
             onRetry = viewModel::retry,
             onCreatePod = onCreatePod,
             onSignIn = onSignIn,
-            onOpenPod = onOpenPod,
+            onOpenPod = { podId -> onOpenPod(podId, (uiState as? DiscoverUiState.Content)?.walkMinutes?.get(podId)) },
             onJoin = viewModel::join,
             onLeave = viewModel::leave,
             onCancel = viewModel::cancel,
