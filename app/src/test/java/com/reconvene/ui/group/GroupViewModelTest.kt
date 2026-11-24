@@ -16,6 +16,7 @@ import com.reconvene.testing.TestAuthRepository
 import com.reconvene.ui.create.CreatePodForm
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -148,6 +149,8 @@ class GroupViewModelTest {
         val content = viewModel.content()
         assertEquals(listOf("Jordan", "Sam"), content.messages.map { it.authorName })
         assertEquals(GroupNotice.BLOCKED, viewModel.notice.value)
+        // Saved under the name their messages showed, for the list on Profile.
+        assertEquals(listOf(PodMember("sample-maya", "Maya")), repository.observeBlockedPeople(content.viewerUid).first())
     }
 
     @Test

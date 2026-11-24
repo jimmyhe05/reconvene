@@ -22,14 +22,14 @@ import com.reconvene.data.model.toNewGroup
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.time.Clock
 
 // Groups in Firestore. Every change is a transaction that reads the server's copy, checks it with the
 // same rules as the app (Group.kt), and writes only the fields that change. firebase/firestore.rules
 // checks the same things again. Transactions need the network, so changes fail offline instead of
-// queueing; the cached groups stay readable. Chat messages are the exception: plain writes that queue.
+// queueing; the cached groups stay readable. Chat messages and blocks are the exception: they are
+// plain writes, which queue.
 class FirestoreGroupRemoteDataSource(
     private val firestore: FirebaseFirestore,
     private val clock: Clock,
@@ -39,6 +39,9 @@ class FirestoreGroupRemoteDataSource(
     private val pods get() = firestore.collection(PODS_COLLECTION)
 
     private fun messages(groupId: String) = groups.document(groupId).collection(MESSAGES_COLLECTION)
+
+    private fun blocked(uid: String) =
+        firestore.collection(USERS_COLLECTION).document(uid).collection(BLOCKED_COLLECTION)
 
     // Live while collected. Offline it answers from Firestore's own cache and catches up later. A
     // group the user left or declined drops out of the results, so the repository drops it too.
@@ -160,16 +163,37 @@ class FirestoreGroupRemoteDataSource(
         saved to pod
     }
 
-    // Reports and blocking reach Firestore in a later change.
-    override fun observeBlocked(uid: String): Flow<Set<String>> = flowOf(emptySet())
+    // Live while collected, from Firestore's cache when offline, so a block hides messages at once.
+    override fun observeBlocked(uid: String): Flow<List<PodMember>> = callbackFlow {
+        val registration = blocked(uid).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val found = snapshot?.documents.orEmpty().mapNotNull { document ->
+                document.data?.let { blockedFromFirestore(document.id, it) }
+                    ?: null.also { Log.w(TAG, "Skipped malformed block ${document.id}") }
+            }
+            trySend(found)
+        }
+        awaitClose { registration.remove() }
+    }
 
-    override suspend fun report(report: MessageReport) = notYet("Reporting")
+    // Reporting the same message twice does nothing the second time. Needs the network.
+    override suspend fun report(report: MessageReport) = transaction {
+        val document = firestore.collection(REPORTS_COLLECTION).document(report.documentId)
+        if (!get(document).exists()) set(document, report.toNewFirestoreReport())
+    }
 
-    override suspend fun block(uid: String, blockedUid: String) = notYet("Blocking")
+    // Plain writes that apply on the phone at once and reach the server when they can, so they
+    // don't wait for the network. The rules refuse only a malformed write, which the app doesn't make.
+    override suspend fun block(uid: String, blocked: PodMember) {
+        blocked(uid).document(blocked.uid).set(blocked.toNewFirestoreBlock())
+    }
 
-    override suspend fun unblock(uid: String, blockedUid: String) = notYet("Blocking")
-
-    private fun notYet(what: String): Nothing = throw UnsupportedOperationException("$what isn't on Firestore yet")
+    override suspend fun unblock(uid: String, blockedUid: String) {
+        blocked(uid).document(blockedUid).delete()
+    }
 
     private suspend fun change(
         groupId: String,

@@ -28,6 +28,14 @@ rules_version = '2';
 // groups/{groupId}/messages. Members read it, including after the group is disbanded or archived;
 // invited users don't until they accept. A member writes a message as themselves, under their name in
 // the group, while it's open, stamped with the server's time. Messages are never changed or deleted.
+//
+// Reports (ReportFields in FirestoreGroupMapping.kt). A member reports another member's message in
+// their group, once, with one of the reasons in ReportReason and the server's time. Only the reporter
+// can read their own report, so whoever is reported never learns who it was. Never changed or deleted;
+// the team reads them in the Firebase console.
+//
+// Blocks (BlockFields), in users/{uid}/blocked/{blockedUid}. Only that user reads or changes their own
+// list, and can't block themselves. The blocked person is never told.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -68,6 +76,21 @@ service cloud.firestore {
           && isValidMessage(groupData(groupId), request.resource.data);
         allow update, delete: if false;
       }
+    }
+
+    match /reports/{reportId} {
+      // A report that doesn't exist yet can be read, so the app can check before writing one.
+      allow read: if isBuUser()
+        && (resource == null || resource.data.reporterUid == request.auth.uid);
+      allow create: if isBuUser() && isValidReport(reportId, request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /users/{uid}/blocked/{blockedUid} {
+      allow read, delete: if isBuUser() && request.auth.uid == uid;
+      allow create, update: if isBuUser() && request.auth.uid == uid
+        && blockedUid != uid && blockedUid.size() <= 128
+        && isValidBlock(request.resource.data);
     }
 
     function groupData(groupId) {
@@ -293,6 +316,27 @@ service cloud.firestore {
         && request.auth.uid == before.hostUid
         && after.disbanded == true
         && after.disbandedAt == request.time;
+    }
+
+    // The reporter is a member of the group, and the person reported wrote the message and isn't them.
+    function isValidReport(reportId, report) {
+      let uid = request.auth.uid;
+      let fields = ['groupId', 'messageId', 'reporterUid', 'targetUid', 'reason', 'createdAt'];
+      let message = get(/databases/$(database)/documents/groups/$(report.groupId)/messages/$(report.messageId)).data;
+      return report.keys().hasOnly(fields) && report.keys().hasAll(fields)
+        && report.reporterUid == uid
+        && reportId == report.messageId + '_' + uid
+        && uid in groupData(report.groupId).members
+        && message.authorUid == report.targetUid
+        && report.targetUid != uid
+        && report.reason in ['HARASSMENT', 'SPAM', 'ACADEMIC_DISHONESTY', 'UNSAFE_MEETUP', 'OTHER']
+        && report.createdAt == request.time;
+    }
+
+    function isValidBlock(block) {
+      return block.keys().hasOnly(['name', 'blockedAt']) && block.keys().hasAll(['name', 'blockedAt'])
+        && isMemberName(block.name)
+        && block.blockedAt == request.time;
     }
 
     // No proposal, or the same one with uid's vote gone (or never there), so someone who's left can't

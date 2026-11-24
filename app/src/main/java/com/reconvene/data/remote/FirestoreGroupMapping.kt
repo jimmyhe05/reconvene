@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.reconvene.data.model.Group
 import com.reconvene.data.model.GroupMessage
+import com.reconvene.data.model.MessageReport
 import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
@@ -185,6 +186,54 @@ fun messageFromFirestore(id: String, groupId: String, data: Map<String, Any?>, p
         sentAt = instantOf(data[MessageFields.SENT_AT]) ?: return null,
         status = if (pending) MessageStatus.SENDING else MessageStatus.SENT,
     )
+
+// Reports of chat messages. Only the reporter can read their own; the team reviews them in the
+// Firebase console.
+const val REPORTS_COLLECTION = "reports"
+
+object ReportFields {
+    const val GROUP_ID = "groupId"
+    const val MESSAGE_ID = "messageId"
+    const val REPORTER_UID = "reporterUid"
+    const val TARGET_UID = "targetUid"
+    const val REASON = "reason"
+
+    // Set by the server.
+    const val CREATED_AT = "createdAt"
+}
+
+// One report per person per message, so reporting the same message again changes nothing.
+val MessageReport.documentId: String get() = "${messageId}_$reporterUid"
+
+fun MessageReport.toNewFirestoreReport(): Map<String, Any> = mapOf(
+    ReportFields.GROUP_ID to groupId,
+    ReportFields.MESSAGE_ID to messageId,
+    ReportFields.REPORTER_UID to reporterUid,
+    ReportFields.TARGET_UID to targetUid,
+    ReportFields.REASON to reason.name,
+    ReportFields.CREATED_AT to FieldValue.serverTimestamp(),
+)
+
+// Whom a user blocked: users/{uid}/blocked/{blockedUid}. Only that user can read or change it.
+const val USERS_COLLECTION = "users"
+const val BLOCKED_COLLECTION = "blocked"
+
+object BlockFields {
+    // The blocked person's name when they were blocked, for the list on Profile.
+    const val NAME = "name"
+
+    // Set by the server.
+    const val BLOCKED_AT = "blockedAt"
+}
+
+fun PodMember.toNewFirestoreBlock(): Map<String, Any> = mapOf(
+    BlockFields.NAME to name,
+    BlockFields.BLOCKED_AT to FieldValue.serverTimestamp(),
+)
+
+// The document id is the blocked person's uid. Null for a document without a name.
+fun blockedFromFirestore(blockedUid: String, data: Map<String, Any?>): PodMember? =
+    (data[BlockFields.NAME] as? String)?.let { PodMember(blockedUid, it) }
 
 private fun membersOf(value: Any?): List<PodMember>? = (value as? Map<*, *>)
     ?.mapNotNull { (uid, name) -> if (uid is String && name is String) PodMember(uid, name) else null }

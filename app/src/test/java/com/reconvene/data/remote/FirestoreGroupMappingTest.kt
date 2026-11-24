@@ -4,9 +4,11 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
 import com.reconvene.data.model.Group
 import com.reconvene.data.model.GroupMessage
+import com.reconvene.data.model.MessageReport
 import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.PodMember
 import com.reconvene.data.model.PodMode
+import com.reconvene.data.model.ReportReason
 import com.reconvene.data.model.SEMESTER_END
 import com.reconvene.data.model.SessionProposal
 import org.junit.Assert.assertEquals
@@ -164,5 +166,25 @@ class FirestoreGroupMappingTest {
             setOf(GroupFields.MEMBERS, GroupFields.ACCESS, GroupFields.PROPOSAL),
             changedFields(proposed, proposed.withoutMember(ana.uid)).keys,
         )
+    }
+
+    @Test
+    fun reportIsOnePerPersonPerMessageWithTheServersTime() {
+        val report = MessageReport("pod-1", "m1", reporterUid = "ana", targetUid = "ben", reason = ReportReason.SPAM)
+        val data = report.toNewFirestoreReport()
+
+        assertEquals("m1_ana", report.documentId)
+        assertEquals("SPAM", data[ReportFields.REASON])
+        assertEquals("ben", data[ReportFields.TARGET_UID])
+        assertTrue(data[ReportFields.CREATED_AT] is FieldValue)
+    }
+
+    @Test
+    fun blockKeepsTheNameAndReadsBackUnderTheDocumentId() {
+        val data = ben.toNewFirestoreBlock()
+
+        assertEquals(setOf(BlockFields.NAME, BlockFields.BLOCKED_AT), data.keys)
+        assertEquals(ben, blockedFromFirestore("ben", data))
+        assertNull(blockedFromFirestore("ben", data - BlockFields.NAME))
     }
 }

@@ -80,6 +80,11 @@ over takes back the leaver's vote. Only the host schedules it, once at least one
 one write makes the pod (the group's name and course, the proposal's time, place and vibe, the host plus
 everyone who said yes) and clears the proposal. The pod is public in Discover like any other.
 
+A member can report another member's message in their group, once per message, with one of the reasons
+in `ReportReason`. Only the reporter can read their report, so the person reported never learns who it
+was. Nobody can change or delete a report; we read them in the Firebase console (Firestore → `reports`).
+Each user's block list is theirs alone to read and change, and nobody can block themselves.
+
 Test the rules on the Firestore emulator before publishing a change. The tests are in `rules-test/` and
 need Node, plus Java 21 or newer for the emulator (Android Studio's bundled JDK works):
 
@@ -124,6 +129,8 @@ key file. Only run it against our own project.
 | Group screen open | A live listener on the group's latest 300 messages, ordered by the server's time, upserts them into Room. One the server doesn't have yet shows as sending, at the phone's estimate of the time. |
 | Send a message | Saved to Room as sending, then written to Firestore with its own id. A plain write, not a transaction, so it queues offline and lands when the network is back, even after a restart. Refused by the rules (for example after leaving), it shows as failed and can be retried; a retry of one the server already has counts as sent. |
 | Schedule | One transaction reads the group, checks it with `scheduleProblem` in `Group.kt`, makes the pod with the proposal's id, and clears the proposal. The pod is saved to Room too, so it shows in Discover at once. Needs the network. |
+| Report | A transaction checks whether this user already reported the message and writes the report if not. Needs the network. |
+| Block or unblock | A plain write to the user's own list, applied on the phone at once and sent when the network is back. A live listener on the list hides blocked people's messages and fills the Blocked list on Profile. |
 | Sign out or switch account | Cached groups and chat are deleted from the phone. Pods stay, since every BU student can read them. |
 | Malformed document | Skipped with a log line under the `FirestorePods` tag, so one bad document can't break the list. Pods made before sign-in (with `memberNames` and no `hostUid`) are skipped this way too. |
 
@@ -183,3 +190,20 @@ Subcollection `groups/{groupId}/messages`, document id = message id (a UUID made
 | `authorName` | string | the sender's name in the group's `members` |
 | `text` | string | 1 to 500 characters, not just spaces |
 | `sentAt` | timestamp | set by the server |
+
+Collection `reports`, document id = `{messageId}_{reporterUid}`, so one report per person per message.
+
+| Field | Type | Notes |
+|---|---|---|
+| `groupId`, `messageId` | string | the reported message, in `groups/{groupId}/messages` |
+| `reporterUid` | string | who reported it; only they can read the report |
+| `targetUid` | string | the message's author, never the reporter |
+| `reason` | string | `HARASSMENT`, `SPAM`, `ACADEMIC_DISHONESTY`, `UNSAFE_MEETUP` or `OTHER` |
+| `createdAt` | timestamp | set by the server |
+
+Subcollection `users/{uid}/blocked`, document id = the blocked person's uid.
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | string | their name when blocked, 1 to 40 characters, for the list on Profile |
+| `blockedAt` | timestamp | set by the server |

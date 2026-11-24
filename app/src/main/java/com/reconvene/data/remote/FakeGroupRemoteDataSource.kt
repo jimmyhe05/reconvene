@@ -30,7 +30,8 @@ class FakeGroupRemoteDataSource(
 
     private val groups = MutableStateFlow(sampleGroups(clock).associateBy { it.id })
     private val messages = MutableStateFlow(sampleMessages(clock))
-    private val blocked = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
+    // Blocker's uid to the people they blocked.
+    private val blocked = MutableStateFlow<Map<String, List<PodMember>>>(emptyMap())
 
     // Reports go nowhere without a server; kept so tests can see them.
     val reports = mutableListOf<MessageReport>()
@@ -41,7 +42,7 @@ class FakeGroupRemoteDataSource(
     override fun observeMessages(groupId: String): Flow<List<GroupMessage>> =
         messages.map { all -> all.filter { it.groupId == groupId }.sortedBy { it.sentAt } }
 
-    override fun observeBlocked(uid: String): Flow<Set<String>> = blocked.map { it[uid].orEmpty() }
+    override fun observeBlocked(uid: String): Flow<List<PodMember>> = blocked.map { it[uid].orEmpty() }
 
     override suspend fun createGroup(group: Group): Group {
         delay(delayMillis)
@@ -96,12 +97,12 @@ class FakeGroupRemoteDataSource(
         reports += report
     }
 
-    override suspend fun block(uid: String, blockedUid: String) {
-        blocked.update { it + (uid to it[uid].orEmpty() + blockedUid) }
+    override suspend fun block(uid: String, blocked: PodMember) {
+        this.blocked.update { all -> all + (uid to all[uid].orEmpty().filterNot { it.uid == blocked.uid } + blocked) }
     }
 
     override suspend fun unblock(uid: String, blockedUid: String) {
-        blocked.update { it + (uid to it[uid].orEmpty() - blockedUid) }
+        blocked.update { all -> all + (uid to all[uid].orEmpty().filterNot { it.uid == blockedUid }) }
     }
 
     private fun now(): Instant = clock.instant()
