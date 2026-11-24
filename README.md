@@ -12,8 +12,8 @@ This is the app as of Update 2 (November 24, 2026). It is not feature-complete y
 
 | | Features |
 |---|---|
-| **Done** | Sign in with a verified @bu.edu Google account. Discover upcoming and ongoing pods, grouped by day, with search, filters and walking times. Create a pod for 2 to 50 people, with suggested buildings and meeting points. Join and leave a pod; the host can cancel it. Groups: the pod's host keeps it as a group for the semester, with invites, handing over the host role, disbanding, group chat, and proposing, voting on and scheduling the next session; members can report a message and block someone. Profile shows this semester's pods, hours and groups, the next pod, an appearance choice (follow the phone, light or dark), blocked people and advice on meeting safely. Pods and groups stay readable offline. App data is left out of backups and device transfer. |
-| **Next (Final, Dec 8)** | Reminders before a pod starts. Quick states ("Here", "Running late") with a shared timer. |
+| **Done** | Sign in with a verified @bu.edu Google account. Discover upcoming and ongoing pods, grouped by day, with search, filters and walking times. Create a pod for 2 to 50 people, with suggested buildings and meeting points. Join and leave a pod; the host can cancel it. Groups: the pod's host keeps it as a group for the semester, with invites, handing over the host role, disbanding, group chat, and proposing, voting on and scheduling the next session; members can report a message and block someone. Profile shows this semester's pods, hours and groups, the next pod, an appearance choice (follow the phone, light or dark), reminders before a pod starts (15, 30 or 60 minutes ahead, off by default), blocked people and advice on meeting safely. Pods and groups stay readable offline. App data is left out of backups and device transfer. |
+| **Next (Final, Dec 8)** | Quick states ("Here", "Running late") with a shared timer. |
 | **Deferred** | Deleting an account from the app, a board for asks and offers, matching people by courses and free time, push notifications from the server. |
 
 ## Team
@@ -149,6 +149,8 @@ Note that `connectedDebugAndroidTest` uninstalls the app when it finishes, which
 - A pod stores its host's and members' Google display names and Firebase user ids, nothing else about them.
   Location is read on the phone only when someone taps Nearest first, to show walking times; it is
   never stored or sent.
+- Reminders are scheduled on the phone with WorkManager from the pods already synced there; nothing is
+  sent to a server to notify the user. The app asks for permission to notify only when reminders are turned on.
 - The app opts out of Android backup and device-to-device transfer, so cached pods and the signed-in
   session stay on the phone they were made on.
 - Firebase settings live in `local.properties`, and `google-services.json` is gitignored. Neither is
