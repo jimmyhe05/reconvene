@@ -44,9 +44,7 @@ fun Pod.toFirestore(): Map<String, Any?> = mapOf(
 
 // Returns null for a document that is missing a field or has the wrong type.
 fun podFromFirestore(id: String, data: Map<String, Any?>): Pod? {
-    val mode = (data[PodFields.MODE] as? String)
-        ?.let { name -> PodMode.entries.firstOrNull { it.name == name } }
-        ?: return null
+    val mode = (data[PodFields.MODE] as? String)?.let(PodMode::fromStored) ?: return null
     val hostUid = data[PodFields.HOST_UID] as? String ?: return null
     val members = (data[PodFields.MEMBERS] as? Map<*, *>)
         ?.mapNotNull { (uid, name) -> if (uid is String && name is String) PodMember(uid, name) else null }

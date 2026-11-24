@@ -63,7 +63,7 @@ fun samplePods(clock: Clock): List<Pod> {
             hostUid = sampleMember("Priya").uid,
             hostName = "Priya",
             members = listOf("Priya", "Alex", "Jordan").map(::sampleMember),
-            mode = PodMode.COORDINATE,
+            mode = PodMode.TALK,
         ),
         Pod(
             id = "a6",
@@ -105,7 +105,7 @@ fun samplePods(clock: Clock): List<Pod> {
             hostUid = sampleMember("Theo").uid,
             hostName = "Theo",
             members = listOf("Theo", "Chen", "Priya").map(::sampleMember),
-            mode = PodMode.COORDINATE,
+            mode = PodMode.TALK,
         ),
         Pod(
             id = "a4",
