@@ -2,7 +2,12 @@ package com.reconvene.data.remote
 
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot.ServerTimestampBehavior
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.MetadataChanges
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.Transaction
 import com.reconvene.data.model.Group
 import com.reconvene.data.model.GroupActionException
@@ -17,7 +22,6 @@ import com.reconvene.data.model.toNewGroup
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import java.time.Clock
@@ -25,7 +29,7 @@ import java.time.Clock
 // Groups in Firestore. Every change is a transaction that reads the server's copy, checks it with the
 // same rules as the app (Group.kt), and writes only the fields that change. firebase/firestore.rules
 // checks the same things again. Transactions need the network, so changes fail offline instead of
-// queueing; the cached groups stay readable.
+// queueing; the cached groups stay readable. Chat messages are the exception: plain writes that queue.
 class FirestoreGroupRemoteDataSource(
     private val firestore: FirebaseFirestore,
     private val clock: Clock,
@@ -33,6 +37,8 @@ class FirestoreGroupRemoteDataSource(
 
     private val groups get() = firestore.collection(GROUPS_COLLECTION)
     private val pods get() = firestore.collection(PODS_COLLECTION)
+
+    private fun messages(groupId: String) = groups.document(groupId).collection(MESSAGES_COLLECTION)
 
     // Live while collected. Offline it answers from Firestore's own cache and catches up later. A
     // group the user left or declined drops out of the results, so the repository drops it too.
@@ -93,9 +99,43 @@ class FirestoreGroupRemoteDataSource(
         latest.copy(disbanded = true)
     }
 
-    // Chat, proposals, reports and blocking reach Firestore in later changes. No screen uses them yet.
-    override fun observeMessages(groupId: String): Flow<List<GroupMessage>> = flow { notYet("Group chat") }
+    // The latest messages, oldest first, live while collected. Metadata changes are included so a
+    // message turns from sending to sent as soon as the server has it. Fails if the user isn't a
+    // member, since the rules refuse the read.
+    override fun observeMessages(groupId: String): Flow<List<GroupMessage>> = callbackFlow {
+        val registration = messages(groupId)
+            .orderBy(MessageFields.SENT_AT)
+            .limitToLast(MESSAGE_HISTORY)
+            .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val found = snapshot?.documents.orEmpty().mapNotNull { document ->
+                    // Until the server stamps a new message, its time is the phone's estimate.
+                    document.getData(ServerTimestampBehavior.ESTIMATE)
+                        ?.let { messageFromFirestore(document.id, groupId, it, document.metadata.hasPendingWrites()) }
+                        ?: null.also { Log.w(TAG, "Skipped malformed message ${document.id} in $groupId") }
+                }
+                trySend(found)
+            }
+        awaitClose { registration.remove() }
+    }
 
+    // A plain write, not a transaction, so it queues while offline and lands when the phone is back.
+    // The task finishes only once the server has accepted or refused it.
+    override suspend fun sendMessage(message: GroupMessage) {
+        val document = messages(message.groupId).document(message.id)
+        try {
+            document.set(message.toNewFirestoreMessage()).await()
+        } catch (e: FirebaseFirestoreException) {
+            // Messages can't be changed, so a retry of one the server got after all is refused.
+            if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED && isOnServer(document, message)) return
+            throw e
+        }
+    }
+
+    // Proposals, reports and blocking reach Firestore in later changes.
     override fun observeBlocked(uid: String): Flow<Set<String>> = flowOf(emptySet())
 
     override suspend fun propose(group: Group, proposal: SessionProposal): Group = notYet("Proposals")
@@ -103,8 +143,6 @@ class FirestoreGroupRemoteDataSource(
     override suspend fun vote(group: Group, member: PodMember, canCome: Boolean): Group = notYet("Voting")
 
     override suspend fun schedule(group: Group, uid: String): Pair<Group, Pod> = notYet("Scheduling")
-
-    override suspend fun sendMessage(message: GroupMessage) = notYet("Group chat")
 
     override suspend fun report(report: MessageReport) = notYet("Reporting")
 
@@ -127,6 +165,12 @@ class FirestoreGroupRemoteDataSource(
         saved
     }
 
+    private suspend fun isOnServer(document: DocumentReference, message: GroupMessage): Boolean = try {
+        document.get(Source.SERVER).await().getString(MessageFields.AUTHOR_UID) == message.authorUid
+    } catch (e: FirebaseFirestoreException) {
+        false
+    }
+
     private fun readGroup(transaction: Transaction, groupId: String): Group {
         val snapshot = transaction.get(groups.document(groupId))
         return snapshot.data?.let { groupFromFirestore(groupId, it) }
@@ -144,5 +188,8 @@ class FirestoreGroupRemoteDataSource(
 
     private companion object {
         const val TAG = "FirestoreGroups"
+
+        // A semester of chat can grow long; the screen shows the latest this many.
+        const val MESSAGE_HISTORY = 300L
     }
 }

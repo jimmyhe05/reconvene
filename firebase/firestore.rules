@@ -20,6 +20,11 @@ rules_version = '2';
 //   member calls it off, and when that member accepts they become host and the old host leaves.
 //   Only the host disbands, which marks the group and keeps it.
 // - Delete: never.
+//
+// Group chat (MessageFields in FirestoreGroupMapping.kt, MESSAGE_MAX in Group.kt), in
+// groups/{groupId}/messages. Members read it, including after the group is disbanded or archived;
+// invited users don't until they accept. A member writes a message as themselves, under their name in
+// the group, while it's open, stamped with the server's time. Messages are never changed or deleted.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -47,6 +52,30 @@ service cloud.firestore {
             || isAcceptHandover(resource.data, request.resource.data)
             || isDisband(resource.data, request.resource.data));
       allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isBuUser() && request.auth.uid in groupData(groupId).members;
+        allow create: if isBuUser() && messageId.size() <= 64
+          && isValidMessage(groupData(groupId), request.resource.data);
+        allow update, delete: if false;
+      }
+    }
+
+    function groupData(groupId) {
+      return get(/databases/$(database)/documents/groups/$(groupId)).data;
+    }
+
+    function isValidMessage(group, message) {
+      let uid = request.auth.uid;
+      let fields = ['authorUid', 'authorName', 'text', 'sentAt'];
+      return message.keys().hasOnly(fields) && message.keys().hasAll(fields)
+        && isOpen(group)
+        && uid in group.members
+        && message.authorUid == uid
+        && message.authorName == group.members[uid]
+        && message.text is string && message.text.size() <= 500
+        && message.text.trim().size() >= 1
+        && message.sentAt == request.time;
     }
 
     // The same check the app makes after sign-in (isAllowedBuEmail), repeated where it can't be skipped.

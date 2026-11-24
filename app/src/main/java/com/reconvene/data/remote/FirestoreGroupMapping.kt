@@ -1,7 +1,10 @@
 package com.reconvene.data.remote
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
 import com.reconvene.data.model.Group
+import com.reconvene.data.model.GroupMessage
+import com.reconvene.data.model.MessageStatus
 import com.reconvene.data.model.PodMember
 import java.time.Instant
 import java.util.Date
@@ -94,6 +97,40 @@ fun changedFields(before: Group, after: Group): Map<String, Any?> {
     val old = before.toFirestore()
     return after.toFirestore().filter { (field, value) -> old[field] != value }
 }
+
+// A group's chat is a subcollection of the group: groups/{groupId}/messages/{messageId}.
+const val MESSAGES_COLLECTION = "messages"
+
+// Field names in a message document. firebase/firestore.rules checks the same names.
+object MessageFields {
+    const val AUTHOR_UID = "authorUid"
+    const val AUTHOR_NAME = "authorName"
+    const val TEXT = "text"
+
+    // Set by the server, so everyone sees the chat in the same order whatever their phone's clock says.
+    const val SENT_AT = "sentAt"
+}
+
+// The new message as written. The phone's sentAt isn't sent; the server fills in its own time.
+fun GroupMessage.toNewFirestoreMessage(): Map<String, Any> = mapOf(
+    MessageFields.AUTHOR_UID to authorUid,
+    MessageFields.AUTHOR_NAME to authorName,
+    MessageFields.TEXT to text,
+    MessageFields.SENT_AT to FieldValue.serverTimestamp(),
+)
+
+// pending is true while the server doesn't have the message yet, which shows it as sending.
+// Returns null for a document missing a field or with the wrong type.
+fun messageFromFirestore(id: String, groupId: String, data: Map<String, Any?>, pending: Boolean): GroupMessage? =
+    GroupMessage(
+        id = id,
+        groupId = groupId,
+        authorUid = data[MessageFields.AUTHOR_UID] as? String ?: return null,
+        authorName = data[MessageFields.AUTHOR_NAME] as? String ?: return null,
+        text = data[MessageFields.TEXT] as? String ?: return null,
+        sentAt = instantOf(data[MessageFields.SENT_AT]) ?: return null,
+        status = if (pending) MessageStatus.SENDING else MessageStatus.SENT,
+    )
 
 private fun membersOf(value: Any?): List<PodMember>? = (value as? Map<*, *>)
     ?.mapNotNull { (uid, name) -> if (uid is String && name is String) PodMember(uid, name) else null }
