@@ -144,11 +144,12 @@ internal fun ReconveneColors.toColorScheme(darkTheme: Boolean): ColorScheme {
         onPrimaryContainer = onPrimaryContainer,
         // The hero surface is dark in both themes
         inversePrimary = DarkColors.primary,
-        // secondary: selected filter chips; secondaryContainer: nav pill and tonal buttons
+        // secondary and secondaryContainer: selected chips and tonal buttons, filled with ink like the
+        // main buttons. The nav bar sets its own colors.
         secondary = ink,
         onSecondary = canvas,
-        secondaryContainer = primaryContainer,
-        onSecondaryContainer = onPrimaryContainer,
+        secondaryContainer = ink,
+        onSecondaryContainer = canvas,
         tertiary = primary,
         onTertiary = onPrimary,
         tertiaryContainer = primaryContainer,
