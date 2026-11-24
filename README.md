@@ -157,8 +157,8 @@ Note that `connectedDebugAndroidTest` uninstalls the app when it finishes, which
 
 ## Outside resources and licenses
 
-- Fonts: [DM Sans](https://github.com/googlefonts/dm-fonts) and DM Serif Display, both under the SIL Open
-  Font License 1.1. The license texts are in [`licenses/`](licenses).
+- Fonts: [IBM Plex Sans and IBM Plex Mono](https://github.com/IBM/plex), under the SIL Open Font
+  License 1.1. The license text is in [`licenses/`](licenses).
 - Libraries: AndroidX, Jetpack Compose, Room, Kotlin coroutines and kotlinx.serialization (Apache 2.0),
   and the Firebase Android SDKs (Apache 2.0), pulled in through Gradle.
 - Icons and the design system follow our own Study Pod prototype.

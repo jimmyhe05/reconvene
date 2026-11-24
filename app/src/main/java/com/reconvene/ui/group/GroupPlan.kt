@@ -97,6 +97,7 @@ fun GroupPlan(
 private fun ProposeButton(replaces: Boolean, enabled: Boolean, onClick: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         OutlinedButton(
+            shape = MaterialTheme.shapes.small,
             onClick = onClick,
             enabled = enabled,
             modifier = Modifier
@@ -147,9 +148,10 @@ private fun ProposalCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        // Framed in ink, the one box on the plan that asks for an answer.
+        border = BorderStroke(1.dp, ReconveneTheme.colors.ink),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(
@@ -246,9 +248,9 @@ private fun VoteButtons(myVote: Boolean?, enabled: Boolean, onVote: (Boolean) ->
                 Text(stringResource(label))
             }
             if (isChosen) {
-                Button(onClick = { onVote(canCome) }, enabled = enabled, modifier = buttonModifier) { content() }
+                Button(shape = MaterialTheme.shapes.small, onClick = { onVote(canCome) }, enabled = enabled, modifier = buttonModifier) { content() }
             } else {
-                OutlinedButton(onClick = { onVote(canCome) }, enabled = enabled, modifier = buttonModifier) { content() }
+                OutlinedButton(shape = MaterialTheme.shapes.small, onClick = { onVote(canCome) }, enabled = enabled, modifier = buttonModifier) { content() }
             }
         }
     }
@@ -263,6 +265,7 @@ private fun HostScheduling(uiState: GroupUiState.Content, onSchedule: () -> Unit
             color = ReconveneTheme.colors.inkMuted,
         )
         Button(
+            shape = MaterialTheme.shapes.small,
             onClick = onSchedule,
             enabled = uiState.canSchedule && !uiState.isBusy,
             modifier = Modifier

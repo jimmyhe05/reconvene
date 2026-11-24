@@ -61,7 +61,7 @@ internal fun KeepGroupSection(pod: Pod, isKeeping: Boolean, onKeep: (name: Strin
                 style = MaterialTheme.typography.bodyMedium,
                 color = ReconveneTheme.colors.inkMuted,
             )
-            FilledTonalButton(onClick = { naming = true }, enabled = !isKeeping) {
+            FilledTonalButton(shape = MaterialTheme.shapes.small, onClick = { naming = true }, enabled = !isKeeping) {
                 Icon(
                     painterResource(R.drawable.ic_users),
                     contentDescription = null,

@@ -93,7 +93,7 @@ private fun SignedIn(user: SignedInUser, onSignOut: () -> Unit) {
     Text(user.email, style = MaterialTheme.typography.bodyLarge)
     // Shown only for a Google account Firebase reports as verified and @bu.edu.
     Text(stringResource(R.string.profile_bu_verified), style = MaterialTheme.typography.labelLarge)
-    OutlinedButton(onClick = onSignOut, modifier = Modifier.heightIn(min = 48.dp)) {
+    OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onSignOut, modifier = Modifier.heightIn(min = 48.dp)) {
         Text(stringResource(R.string.profile_sign_out))
     }
 }
@@ -151,6 +151,7 @@ private fun SignedOut(uiState: ProfileUiState, onSignIn: () -> Unit) {
         return
     }
     Button(
+        shape = MaterialTheme.shapes.small,
         onClick = onSignIn,
         enabled = !uiState.isSigningIn,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),

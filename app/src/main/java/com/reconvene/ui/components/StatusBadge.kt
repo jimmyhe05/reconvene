@@ -38,7 +38,7 @@ fun StatusBadge(kind: BadgeKind, text: String, modifier: Modifier = Modifier) {
     }
     Surface(
         modifier = modifier,
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.extraSmall,
         color = containerColor,
         contentColor = contentColor,
         border = if (kind == BadgeKind.OPEN) BorderStroke(1.dp, colors.outlineStrong) else null,

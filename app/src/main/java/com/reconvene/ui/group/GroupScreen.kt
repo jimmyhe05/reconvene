@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
@@ -66,6 +65,7 @@ import com.reconvene.ui.components.EmptyState
 import com.reconvene.ui.create.CreatePodForm
 import com.reconvene.ui.discover.dayLabel
 import com.reconvene.ui.theme.ReconveneTheme
+import com.reconvene.ui.theme.TimeStyles
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -234,7 +234,7 @@ private fun CenteredState(content: @Composable () -> Unit) {
 
 @Composable
 private fun BackToGroups(onBack: () -> Unit) {
-    OutlinedButton(onClick = onBack) {
+    OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onBack) {
         Text(stringResource(R.string.group_back))
     }
 }
@@ -335,7 +335,7 @@ private fun SyncFailedBanner(onRetry: () -> Unit) {
     }
 }
 
-// The bubble, author, time and status are read as one item. Retry and the menu for other people's
+// The author, time, status and text are read as one item. Retry and the menu for other people's
 // messages sit outside it as their own buttons.
 @Composable
 private fun MessageRow(
@@ -354,47 +354,29 @@ private fun MessageRow(
     }
     val meta = listOfNotNull(messageTime(message.sentAt, now), status).joinToString(" · ")
     val label = stringResource(R.string.group_message_label, author, message.text, meta)
-    val alignment = if (isMine) Alignment.End else Alignment.Start
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = if (isMine) 48.dp else 0.dp),
-        horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
-    ) {
-        Column(Modifier.weight(1f, fill = false), horizontalAlignment = alignment) {
+    // A plain log, like a timetable's notes: name and time, then the text. No bubbles, everyone on the
+    // left, so it reads top to bottom.
+    Row(Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
             Column(
-                modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = label },
-                horizontalAlignment = alignment,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .padding(vertical = 6.dp)
+                    .semantics(mergeDescendants = true) { contentDescription = label },
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Surface(
-                    shape = bubbleShape(isMine),
-                    color = if (isMine) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    },
-                ) {
-                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                        if (!isMine) {
-                            Text(
-                                text = message.authorName,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        Text(message.text, style = MaterialTheme.typography.bodyLarge)
-                    }
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(author, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = meta,
+                        style = TimeStyles.meta,
+                        color = if (message.status == MessageStatus.FAILED) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            ReconveneTheme.colors.inkMuted
+                        },
+                    )
                 }
-                Text(
-                    text = meta,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (message.status == MessageStatus.FAILED) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        ReconveneTheme.colors.inkMuted
-                    },
-                )
+                Text(message.text, style = MaterialTheme.typography.bodyLarge)
             }
             if (message.status == MessageStatus.FAILED) {
                 val retryLabel = stringResource(R.string.group_retry_label, message.text.take(40))
@@ -406,13 +388,6 @@ private fun MessageRow(
         if (!isMine) MessageMenu(message.authorName, onReport, onBlock)
     }
 }
-
-private fun bubbleShape(isMine: Boolean) = RoundedCornerShape(
-    topStart = 18.dp,
-    topEnd = 18.dp,
-    bottomEnd = if (isMine) 4.dp else 18.dp,
-    bottomStart = if (isMine) 18.dp else 4.dp,
-)
 
 // Just the time today, with the day before that.
 @Composable

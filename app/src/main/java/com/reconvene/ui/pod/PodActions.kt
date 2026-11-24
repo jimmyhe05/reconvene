@@ -49,11 +49,12 @@ fun PodActions(
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.weight(1f),
             )
-            OutlinedButton(onClick = onLeave, enabled = !isBusy, modifier = Modifier.heightIn(min = 48.dp)) {
+            OutlinedButton(shape = MaterialTheme.shapes.small, onClick = onLeave, enabled = !isBusy, modifier = Modifier.heightIn(min = 48.dp)) {
                 ButtonLabel(R.string.pod_leave, R.string.pod_leaving, isBusy)
             }
         }
         pod.joinProblem(now) == null -> Button(
+            shape = MaterialTheme.shapes.small,
             onClick = onJoin,
             enabled = !isBusy,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -75,6 +76,7 @@ private fun HostRow(isBusy: Boolean, onCancel: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         OutlinedButton(
+            shape = MaterialTheme.shapes.small,
             onClick = { confirming = true },
             enabled = !isBusy,
             modifier = Modifier.heightIn(min = 48.dp),

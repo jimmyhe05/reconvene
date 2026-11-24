@@ -4,10 +4,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
+// Small, squarish corners: buttons and chips at 6, panels at 8.
 val Shapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),  // --radius-xs
-    small = RoundedCornerShape(12.dp),      // --radius-sm
-    medium = RoundedCornerShape(16.dp),     // --radius-md
-    large = RoundedCornerShape(22.dp),      // --radius-lg
-    extraLarge = RoundedCornerShape(28.dp), // --radius-xl
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(6.dp),
+    medium = RoundedCornerShape(8.dp),
+    large = RoundedCornerShape(10.dp),
+    extraLarge = RoundedCornerShape(12.dp),
 )

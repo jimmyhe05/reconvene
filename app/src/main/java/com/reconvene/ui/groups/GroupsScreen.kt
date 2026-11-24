@@ -119,7 +119,7 @@ fun GroupsContent(
                         title = stringResource(R.string.groups_signed_out_title),
                         body = stringResource(R.string.groups_signed_out_body),
                         action = {
-                            Button(onClick = onSignIn) {
+                            Button(shape = MaterialTheme.shapes.small, onClick = onSignIn) {
                                 Text(stringResource(R.string.action_sign_in))
                             }
                         },
@@ -138,7 +138,7 @@ fun GroupsContent(
                         title = stringResource(R.string.groups_error_title),
                         body = stringResource(R.string.discover_error_body),
                         action = {
-                            FilledTonalButton(onClick = onRetry) {
+                            FilledTonalButton(shape = MaterialTheme.shapes.small, onClick = onRetry) {
                                 Text(stringResource(R.string.action_retry))
                             }
                         },
@@ -218,6 +218,7 @@ private fun InviteCard(group: Group, isBusy: Boolean, onAccept: () -> Unit, onDe
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(
+                shape = MaterialTheme.shapes.small,
                 onClick = onAccept,
                 enabled = !isBusy,
                 modifier = Modifier.semantics { contentDescription = acceptLabel },

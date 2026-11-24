@@ -4,7 +4,7 @@
     <string name="nav_groups">Groups</string>
     <string name="nav_profile">Profile</string>
 
-    <string name="discover_title">Study together, today.</string>
+    <string name="discover_title">Study pods</string>
     <string name="discover_loading">Loading pods</string>
     <string name="discover_empty_title">Nothing scheduled right now</string>
     <string name="discover_empty_body">Start one and others can join.</string>

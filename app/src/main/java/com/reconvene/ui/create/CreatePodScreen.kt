@@ -255,6 +255,7 @@ private fun CreateBar(problem: String?, isSaving: Boolean, onCreate: () -> Unit)
                 )
             }
             Button(
+                shape = MaterialTheme.shapes.small,
                 onClick = onCreate,
                 enabled = !isSaving,
                 modifier = Modifier
