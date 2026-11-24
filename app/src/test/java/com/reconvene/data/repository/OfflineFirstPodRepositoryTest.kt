@@ -48,6 +48,18 @@ class OfflineFirstPodRepositoryTest {
     }
 
     @Test
+    fun refreshMineSavesTheUsersPodsEndedOnesToo() = runTest {
+        val ended = testPod(id = "past", startsAt = noon.minusSeconds(7 * 24 * 3600)).withMember(terrier)
+        val upcoming = testPod(id = "next", startsAt = noon).withMember(terrier)
+        val someoneElses = testPod(id = "other", startsAt = noon)
+        val repository = repository(TestPodRemoteDataSource { listOf(upcoming, someoneElses) + ended })
+
+        repository.refreshMine(terrier.uid)
+
+        assertEquals(setOf("past", "next"), repository.observePods().first().map { it.id }.toSet())
+    }
+
+    @Test
     fun observedPodFollowsChangesAndIsNullWhenMissing() = runTest {
         val repository = repository(TestPodRemoteDataSource { emptyList() })
         val pod = testPod(id = "a1", startsAt = noon)

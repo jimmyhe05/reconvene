@@ -23,6 +23,8 @@ class FakePodRemoteDataSource(private val clock: Clock) : PodRemoteDataSource {
         return pods.updateAndGet { it ?: samples() }!!.values.toList()
     }
 
+    override suspend fun fetchMyPods(uid: String): List<Pod> = fetchPods().filter { it.hasMember(uid) }
+
     override suspend fun createPod(pod: Pod) {
         store(pod)
     }

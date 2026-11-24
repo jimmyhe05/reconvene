@@ -15,6 +15,9 @@ interface PodRepository {
 
     suspend fun refresh()
 
+    // Saves every pod the user is in, ended ones too, so Profile can count them on a new phone.
+    suspend fun refreshMine(uid: String) = refresh()
+
     suspend fun createPod(pod: Pod)
 
     // These throw PodActionException when the pod can't be joined or left, and other exceptions
