@@ -62,6 +62,15 @@ class PodDaoTest {
         assertEquals(null, podDao.observeById("missing").first())
     }
 
+    // An older build could have saved "Okay to coordinate" as COORDINATE, which now reads as Open to chat.
+    @Test
+    fun aStoredCoordinatePodReadsAsOpenToChat() = runTest {
+        podDao.upsertAll(listOf(pod(id = "a1").toEntity()))
+        database.openHelper.writableDatabase.execSQL("UPDATE pods SET mode = 'COORDINATE' WHERE id = 'a1'")
+
+        assertEquals(PodMode.TALK, podDao.getById("a1")?.mode)
+    }
+
     private fun pod(
         id: String,
         startsAt: Instant = noon,

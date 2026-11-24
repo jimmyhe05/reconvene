@@ -106,7 +106,7 @@ class PodFilterTest {
     fun modesKeepPodsWithAnyChosenMode() {
         val talk = pod.copy(mode = PodMode.TALK)
 
-        assertTrue(PodFilter(modes = setOf(PodMode.TALK, PodMode.COORDINATE)).matches(talk))
+        assertTrue(PodFilter(modes = setOf(PodMode.TALK, PodMode.QUIET)).matches(talk))
         assertFalse(PodFilter(modes = setOf(PodMode.QUIET)).matches(talk))
     }
 
