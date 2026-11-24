@@ -52,6 +52,7 @@
     <string name="pod_place">%1$s, %2$s</string>
     <string name="pod_place_walk">%1$s ·\u00A0%2$d\u00A0min\u00A0walk</string>
     <string name="nearby_chip">Nearest first</string>
+    <string name="nearby_open_settings">Open settings</string>
     <string name="pod_detail_open_maps">Open in Maps</string>
     <string name="pod_detail_no_maps">No maps app is installed to show this place.</string>
     <string name="nearby_locating">Finding you</string>
