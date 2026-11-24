@@ -9,15 +9,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -113,9 +116,18 @@ private fun ReconveneBottomBar(
     currentDestination: NavDestination?,
     onTabSelected: (TopLevelDestination) -> Unit,
 ) {
+    val colors = ReconveneTheme.colors
+    // A hairline on top and no pill behind the selected tab: it's marked by ink over muted grey.
+    val itemColors = NavigationBarItemDefaults.colors(
+        selectedIconColor = colors.ink,
+        selectedTextColor = colors.ink,
+        unselectedIconColor = colors.inkMuted,
+        unselectedTextColor = colors.inkMuted,
+        indicatorColor = Color.Transparent,
+    )
     Column {
-        HorizontalDivider()
-        NavigationBar {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        NavigationBar(containerColor = colors.canvas, tonalElevation = 0.dp) {
             TopLevelDestination.entries.forEach { tab ->
                 val selected = currentDestination?.hierarchy?.any { it.hasRoute(tab.route::class) } == true
                 NavigationBarItem(
@@ -123,6 +135,7 @@ private fun ReconveneBottomBar(
                     onClick = { onTabSelected(tab) },
                     icon = { Icon(painterResource(tab.icon), contentDescription = null) },
                     label = { NavLabel(tab.label) },
+                    colors = itemColors,
                 )
             }
         }
