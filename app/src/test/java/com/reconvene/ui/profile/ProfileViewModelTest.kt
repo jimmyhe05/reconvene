@@ -15,6 +15,7 @@ import com.reconvene.testing.MainDispatcherRule
 import com.reconvene.testing.TestPodRepository
 import com.reconvene.testing.testPod
 import com.reconvene.data.settings.Appearance
+import com.reconvene.data.settings.ReminderLead
 import com.reconvene.data.settings.SettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -168,9 +169,14 @@ class ProfileViewModelTest {
 
     private class InMemorySettings : SettingsRepository {
         override val appearance = MutableStateFlow(Appearance.SYSTEM)
+        override val reminderLead = MutableStateFlow(ReminderLead.OFF)
 
         override suspend fun setAppearance(appearance: Appearance) {
             this.appearance.value = appearance
+        }
+
+        override suspend fun setReminderLead(lead: ReminderLead) {
+            reminderLead.value = lead
         }
     }
 
