@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -142,7 +143,7 @@ private fun MetaLine(pod: Pod, now: Instant) {
             Box(Modifier.size(8.dp).background(ReconveneTheme.colors.live, CircleShape))
         }
         Text(
-            text = parts.joinToString(" · ").uppercase(Locale.getDefault()),
+            text = parts.joinToString(" · ").uppercase(LocalConfiguration.current.locales[0]),
             style = TimeStyles.meta,
             color = ReconveneTheme.colors.inkMuted,
         )

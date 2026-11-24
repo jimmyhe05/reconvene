@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -81,7 +82,6 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Locale
 
 @Composable
 fun DiscoverScreen(
@@ -431,7 +431,7 @@ private fun SectionHeader(section: PodSection, today: LocalDate) {
             .padding(top = 20.dp, bottom = 2.dp),
     ) {
         Text(
-            text = sectionTitle(section.heading, today).uppercase(Locale.getDefault()),
+            text = sectionTitle(section.heading, today).uppercase(LocalConfiguration.current.locales[0]),
             style = MaterialTheme.typography.labelSmall,
             color = ReconveneTheme.colors.inkMuted,
             modifier = Modifier
