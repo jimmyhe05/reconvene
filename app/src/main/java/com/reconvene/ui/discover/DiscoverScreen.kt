@@ -10,6 +10,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,7 +31,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -77,6 +81,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Locale
 
 @Composable
 fun DiscoverScreen(
@@ -183,29 +188,39 @@ fun DiscoverContent(
     }
     Box(modifier = modifier.fillMaxSize()) {
         PodList(uiState = uiState, actions = actions, search = search)
-        if (uiState != DiscoverUiState.SignedOut) {
-            CreatePodButton(actions.onCreatePod, Modifier.align(Alignment.BottomEnd))
-        }
-        // Above the Create pod button, so it doesn't cover it.
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 80.dp),
+                .padding(bottom = 16.dp),
         )
     }
 }
 
+// The title, with Create pod beside it once the user can make one.
 @Composable
-private fun CreatePodButton(onCreatePod: () -> Unit, modifier: Modifier) {
-    ExtendedFloatingActionButton(
-        onClick = onCreatePod,
-        icon = {
-            Icon(painterResource(R.drawable.ic_plus), contentDescription = stringResource(R.string.action_create_pod))
-        },
-        text = { Text(stringResource(R.string.action_create_pod)) },
-        modifier = modifier.padding(16.dp),
-    )
+private fun TitleRow(showCreate: Boolean, onCreatePod: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.discover_title),
+            style = MaterialTheme.typography.displaySmall,
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
+        )
+        if (showCreate) {
+            Button(shape = MaterialTheme.shapes.small, onClick = onCreatePod, modifier = Modifier.heightIn(min = 48.dp)) {
+                Icon(painterResource(R.drawable.ic_plus), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.action_create_pod))
+            }
+        }
+    }
 }
 
 @Composable
@@ -213,17 +228,10 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
     val loadingLabel = stringResource(R.string.discover_loading)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 24.dp),
     ) {
         item(key = "title") {
-            Text(
-                text = stringResource(R.string.discover_title),
-                style = MaterialTheme.typography.displaySmall,
-                modifier = Modifier
-                    .padding(bottom = 4.dp)
-                    .semantics { heading() },
-            )
+            TitleRow(showCreate = uiState != DiscoverUiState.SignedOut, onCreatePod = actions.onCreatePod)
         }
         when (uiState) {
             DiscoverUiState.Loading -> item(key = "loading") {
@@ -241,7 +249,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
                     title = stringResource(R.string.discover_empty_title),
                     body = stringResource(R.string.discover_empty_body),
                     action = {
-                        Button(onClick = actions.onCreatePod) {
+                        Button(shape = MaterialTheme.shapes.small, onClick = actions.onCreatePod) {
                             Text(stringResource(R.string.action_create_pod))
                         }
                     },
@@ -253,7 +261,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
                     title = stringResource(R.string.discover_error_title),
                     body = stringResource(R.string.discover_error_body),
                     action = {
-                        FilledTonalButton(onClick = actions.onRetry) {
+                        FilledTonalButton(shape = MaterialTheme.shapes.small, onClick = actions.onRetry) {
                             Text(stringResource(R.string.action_retry))
                         }
                     },
@@ -265,7 +273,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
                     title = stringResource(R.string.discover_signed_out_title),
                     body = stringResource(R.string.discover_signed_out_body),
                     action = {
-                        Button(onClick = actions.onSignIn) {
+                        Button(shape = MaterialTheme.shapes.small, onClick = actions.onSignIn) {
                             Text(stringResource(R.string.action_sign_in))
                         }
                     },
@@ -273,7 +281,11 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
             }
             is DiscoverUiState.Content -> {
                 item(key = "search") { SearchField(search) }
-                item(key = "filters") { FilterChips(uiState.filter, actions.onFilterChange, uiState.nearby, actions.onNearestFirst) }
+                item(key = "filters") {
+                    Box(Modifier.padding(top = 12.dp, bottom = 4.dp)) {
+                        FilterChips(uiState.filter, actions.onFilterChange, uiState.nearby, actions.onNearestFirst)
+                    }
+                }
                 if (uiState.filter.isActive && uiState.podCount > 0) {
                     item(key = "match-count") { MatchCount(uiState.podCount) }
                 }
@@ -285,6 +297,7 @@ private fun PodList(uiState: DiscoverUiState, actions: PodListActions, search: T
                             body = stringResource(R.string.discover_no_matches_body),
                             action = {
                                 OutlinedButton(
+                                    shape = MaterialTheme.shapes.small,
                                     onClick = {
                                         search.clearText()
                                         actions.onClearFilter()
@@ -340,7 +353,7 @@ private fun SearchField(state: TextFieldState) {
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         // The list already updates as you type, so Search only puts the keyboard away.
         onKeyboardAction = { keyboard?.hide() },
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -379,10 +392,17 @@ private fun FilterChips(
 
 @Composable
 private fun FilterToggle(label: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = ReconveneTheme.colors
     FilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(label) },
+        // Selected chips are filled with ink, like the main buttons.
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = colors.ink,
+            selectedLabelColor = colors.canvas,
+            selectedLeadingIconColor = colors.canvas,
+        ),
         leadingIcon = if (selected) {
             { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
         } else {
@@ -408,11 +428,12 @@ private fun SectionHeader(section: PodSection, today: LocalDate) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
+            .padding(top = 20.dp, bottom = 2.dp),
     ) {
         Text(
-            text = sectionTitle(section.heading, today),
-            style = MaterialTheme.typography.titleSmall,
+            text = sectionTitle(section.heading, today).uppercase(Locale.getDefault()),
+            style = MaterialTheme.typography.labelSmall,
+            color = ReconveneTheme.colors.inkMuted,
             modifier = Modifier
                 .weight(1f)
                 .alignByBaseline()
